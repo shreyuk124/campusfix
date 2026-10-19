@@ -1,3 +1,11 @@
+import Button from "./components/ui/Button";
+import Input from "./components/ui/Input";
+import Card from "./components/ui/Card";
+import StatusBadge from "./components/ui/StatusBadge";
+import PriorityBadge from "./components/ui/PriorityBadge";
+import Skeleton from "./components/ui/Skeleton";
+import EmptyState from "./components/ui/EmptyState";
+import ErrorState from "./components/ui/ErrorState";
 import {
   ArrowRight,
   CheckCircle2,
@@ -259,7 +267,119 @@ export default function App() {
             </div>
           </div>
         </section>
-      </main>
+  <section
+  id="ui-showcase"
+  className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8"
+>
+  <div>
+    <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">
+      Development Preview
+    </p>
+    <h2 className="mt-2 text-2xl font-bold text-ink">
+      UI Component Showcase
+    </h2>
+    <p className="mt-2 text-sm text-muted">
+      Reusable components for the CampusFix application.
+    </p>
+  </div>
+
+  {/* Buttons */}
+  <Card title="Buttons" description="Available button variants and states.">
+    <div className="flex flex-wrap gap-3">
+      <Button>Primary</Button>
+      <Button variant="secondary">Secondary</Button>
+      <Button variant="ghost">Ghost</Button>
+      <Button variant="danger">Danger</Button>
+      <Button variant="success">Success</Button>
+      <Button loading>Loading</Button>
+      <Button disabled>Disabled</Button>
+    </div>
+  </Card>
+
+  {/* Inputs */}
+  <Card title="Input Fields" description="Labels, hints and validation errors.">
+    <div className="grid gap-5 sm:grid-cols-2">
+      <Input
+        label="Full Name"
+        placeholder="Enter your name"
+        hint="Enter your first and last name."
+        required
+      />
+
+      <Input
+        label="Email Address"
+        type="email"
+        placeholder="you@example.com"
+      />
+
+      <Input
+        label="Issue Location"
+        placeholder="e.g. Library, First Floor"
+        error="Please enter a valid location."
+      />
+    </div>
+  </Card>
+
+  {/* Status badges */}
+  <Card
+    title="Issue Statuses"
+    description="Status indicators used throughout CampusFix."
+  >
+    <div className="flex flex-wrap gap-3">
+      {[
+        "Reported",
+        "Assigned",
+        "In Progress",
+        "Resolved",
+        "Closed",
+        "Reopened",
+        "Rejected",
+        "Merged",
+      ].map((status) => (
+        <StatusBadge key={status} status={status} />
+      ))}
+    </div>
+  </Card>
+
+  {/* Priority badges */}
+  <Card
+    title="Issue Priorities"
+    description="Priority indicators for reported issues."
+  >
+    <div className="flex flex-wrap gap-3">
+      {["Low", "Medium", "High", "Critical"].map((priority) => (
+        <PriorityBadge key={priority} priority={priority} />
+      ))}
+    </div>
+  </Card>
+
+  {/* Loading state */}
+  <Card title="Loading State">
+    <div className="space-y-3">
+      <Skeleton className="h-5 w-2/3" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-1/2" />
+    </div>
+  </Card>
+
+  {/* Empty state */}
+  <Card title="Empty State">
+    <EmptyState
+      title="No reports yet"
+      description="When you report a campus issue, it will appear here."
+    />
+  </Card>
+
+  {/* Error state */}
+  <Card title="Error State">
+    <ErrorState
+      title="Unable to load issues"
+      description="Please check your connection and try again."
+      onRetry={() => window.location.reload()}
+    />
+  </Card>
+</section>
+    </main>
 
       <footer className="border-t border-line bg-canvas">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">

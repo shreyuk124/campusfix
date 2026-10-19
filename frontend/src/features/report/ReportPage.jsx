@@ -6,6 +6,7 @@ import DuplicateChecker from './components/DuplicateChecker';
 import PhotoUploader, { MIN_PHOTOS } from './components/PhotoUploader';
 import ReportSuccess from './components/ReportSuccess';
 import Button from '../../components/ui/Button';
+import { MOCK_EXISTING_ISSUES } from './mock/mockDuplicates';
 
 /**
  * ReportPage Component
@@ -13,9 +14,12 @@ import Button from '../../components/ui/Button';
  * Flow:
  * 1. Step 1: Campus & Building (Fast selection)
  * 2. Step 2: Category (Electrical, Plumbing, etc.)
- * 3. Step 3: EARLY DUPLICATE INTERCEPTION (Zero typing needed if already reported!)
- *    - "I am affected too" -> Success Screen
- *    - "None of these - report as new" -> Reveals Step 4 (Room, Photos, Description)
+ * 3. Step 3: EARLY DUPLICATE INTERCEPTION
+ *    - If matching issues exist:
+ *        -> Student can click "I am affected too"
+ *        -> Or click "None of these, report as new" to unlock Step 4
+ *    - If NO matching issues exist:
+ *        -> Step 4 unlocks automatically!
  * 4. Step 4: Specific Room/Floor + Mandatory Photos + Description
  */
 export default function ReportPage() {
@@ -37,7 +41,8 @@ export default function ReportPage() {
   // 5. Description State
   const [description, setDescription] = useState('');
 
-  // 6. Duplicate Interception State
+  // 6. Duplicate Interception State:
+  // Tracks if the student explicitly clicked "None of these - report as new"
   const [bypassedDuplicates, setBypassedDuplicates] = useState(false);
 
   // 7. Submission / Success State
@@ -45,6 +50,19 @@ export default function ReportPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+
+  /**
+   * Check if any duplicates exist for the current building + category combination
+   */
+  const hasDuplicates = Boolean(
+    location.building &&
+    category &&
+    MOCK_EXISTING_ISSUES.some(
+      (issue) =>
+        issue.building.toLowerCase() === location.building.toLowerCase() &&
+        issue.category.toLowerCase() === category.toLowerCase()
+    )
+  );
 
   const handleReset = () => {
     setLocation({ campus: '', building: '' });
@@ -120,10 +138,13 @@ export default function ReportPage() {
   }
 
   // Can we show the detailed form fields?
-  // Only if:
+  // YES if:
   // 1. Campus, Building, and Category are chosen
-  // 2. AND either no duplicates exist OR user clicked "None of these, report as new"
-  const canShowDetailedInputs = location.building && category && bypassedDuplicates;
+  // 2. AND EITHER:
+  //    a) There are NO duplicates in this building (!hasDuplicates)
+  //    b) OR duplicates were found and user clicked "None of these, report as new" (bypassedDuplicates)
+  const canShowDetailedInputs =
+    Boolean(location.building && category) && (!hasDuplicates || bypassedDuplicates);
 
   return (
     <div className="mx-auto max-w-form space-y-6">
@@ -147,7 +168,7 @@ export default function ReportPage() {
             building={location.building}
             onLocationChange={(newLocation) => {
               setLocation(newLocation);
-              setBypassedDuplicates(false); // Reset duplicate bypass if location changes!
+              setBypassedDuplicates(false); // Reset duplicate bypass if location changes
               setErrors((prev) => ({ ...prev, campus: '', building: '' }));
             }}
             errors={errors}
@@ -163,7 +184,7 @@ export default function ReportPage() {
                 value={category}
                 onChange={(newCategory) => {
                   setCategory(newCategory);
-                  setBypassedDuplicates(false); // Re-run duplicate check on category change!
+                  setBypassedDuplicates(false); // Re-run duplicate check on category change
                   setErrors((prev) => ({ ...prev, category: '' }));
                 }}
                 error={errors.category}
@@ -173,8 +194,8 @@ export default function ReportPage() {
         )}
 
         {/* Step 3: Early Duplicate Interception Banner */}
-        {/* Appears immediately when Building & Category are active! */}
-        {location.building && category && !bypassedDuplicates && (
+        {/* Only shown if duplicates actually exist and haven't been bypassed yet */}
+        {hasDuplicates && !bypassedDuplicates && (
           <section className="pt-1">
             <DuplicateChecker
               building={location.building}
@@ -185,7 +206,7 @@ export default function ReportPage() {
           </section>
         )}
 
-        {/* Step 4: Detailed Input (Only shown once user confirms it's a new issue) */}
+        {/* Step 4: Detailed Input (Room, Photos, Description) */}
         {canShowDetailedInputs && (
           <div className="space-y-7 animate-in fade-in duration-300">
             <hr className="border-line" />

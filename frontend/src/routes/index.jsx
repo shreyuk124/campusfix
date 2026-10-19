@@ -1,11 +1,11 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { FeedPage } from '../features/feed';
 import { IssuesPage } from '../features/issues';
 import { ReportPage } from '../features/report';
-import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
-import { LoginPage } from '../features/auth';
+import { LoginPage, RegisterPage } from '../features/auth';
+import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -14,28 +14,49 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <FeedPage />,
+        element: (
+          <ProtectedRoute>
+            <FeedPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'issues',
-        element: <IssuesPage />,
+        element: (
+          <ProtectedRoute>
+            <IssuesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'report',
-        element: <ReportPage />,
-      },
-      {
-        path: 'staff',
-        element: <StaffPage />,
+        element: (
+          <ProtectedRoute>
+            <ReportPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'admin',
-        element: <AdminPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'login',
         element: <LoginPage />,
       },
+      {
+        path: 'register',
+        element: <RegisterPage />,
+      },
+      {
+        path: '*',
+        element: <Navigate to="/login" replace />,
+      },
     ],
   },
 ]);
+

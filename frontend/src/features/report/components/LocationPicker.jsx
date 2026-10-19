@@ -1,4 +1,4 @@
-import { MapPin, Building2, Compass, AlertCircle } from 'lucide-react';
+import { Building2, Compass, AlertCircle } from 'lucide-react';
 
 /**
  * COEP Technological University - Campus Definitions
@@ -10,9 +10,6 @@ export const CAMPUSES = [
 
 /**
  * Real COEP Buildings Dictionary (Verified from COEP Campus Navigation GIS data)
- * 
- * North Campus (Riverside / Tech & Academic Complex)
- * South Campus (Heritage Main Building / Civil / Metallurgy / Admin)
  */
 export const BUILDINGS_BY_CAMPUS = {
   north: [
@@ -57,35 +54,26 @@ export const BUILDINGS_BY_CAMPUS = {
 };
 
 /**
- * LocationPicker Component
+ * LocationPicker Component (Step 1: Campus & Building)
  * 
- * Handles the 3-level cascading location selection:
- * 1. Campus selection (North vs South)
- * 2. Building dropdown (dynamically filtered by campus using real COEP buildings)
- * 3. Specific location (free text for room number, lab name, floor, or landmark)
+ * Only handles the high-level location (Campus and Building).
+ * The fine-grained room/spot field is moved after duplicate detection
+ * to avoid asking the user to type room details if their issue is already reported!
  */
 export default function LocationPicker({
   campus,
   building,
-  specificLocation,
   onLocationChange,
   errors = {},
 }) {
-  // Dynamically compute the buildings available for whichever campus is currently active.
   const availableBuildings = campus ? BUILDINGS_BY_CAMPUS[campus] || [] : [];
 
-  /**
-   * Handle Campus Selection
-   * When switching between North and South Campus, we reset `building: ''`
-   * to ensure no cross-campus building mismatch occurs in state.
-   */
   const handleCampusChange = (newCampus) => {
     if (newCampus === campus) return;
 
     onLocationChange({
       campus: newCampus,
-      building: '', // Reset building
-      specificLocation, // Retain specific room text
+      building: '', // Reset building to prevent invalid cross-campus states
     });
   };
 
@@ -93,15 +81,6 @@ export default function LocationPicker({
     onLocationChange({
       campus,
       building: e.target.value,
-      specificLocation,
-    });
-  };
-
-  const handleSpecificLocationChange = (e) => {
-    onLocationChange({
-      campus,
-      building,
-      specificLocation: e.target.value,
     });
   };
 
@@ -110,19 +89,17 @@ export default function LocationPicker({
       {/* Section Header */}
       <div>
         <label className="block text-sm font-semibold text-ink">
-          Incident Location <span className="text-danger">*</span>
+          Step 1: Where is the problem? <span className="text-danger">*</span>
         </label>
         <p className="text-xs text-muted">
-          Specify where on the COEP campus this maintenance issue occurred.
+          Select the COEP campus and building first.
         </p>
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* Level 1: Campus Selection (Pill Buttons)                       */}
-      {/* ------------------------------------------------------------- */}
+      {/* Level 1: Campus Selection */}
       <div>
         <span className="mb-1.5 block text-xs font-medium text-ink">
-          1. Select Campus
+          Campus
         </span>
         <div className="grid grid-cols-2 gap-3">
           {CAMPUSES.map((c) => {
@@ -156,16 +133,14 @@ export default function LocationPicker({
         )}
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* Level 2: Building Selection (Cascading Dropdown)              */}
-      {/* ------------------------------------------------------------- */}
+      {/* Level 2: Building Selection */}
       <div>
         <label
           htmlFor="building-select"
           className="mb-1.5 block text-xs font-medium text-ink flex items-center gap-1.5"
         >
           <Building2 size={14} className="text-muted" />
-          <span>2. Select Building</span>
+          <span>Building</span>
         </label>
 
         <select
@@ -195,39 +170,6 @@ export default function LocationPicker({
           <p className="mt-1 text-xs text-danger font-medium flex items-center gap-1">
             <AlertCircle size={12} />
             <span>{errors.building}</span>
-          </p>
-        )}
-      </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* Level 3: Exact Location (Room number, floor, or landmark)     */}
-      {/* ------------------------------------------------------------- */}
-      <div>
-        <label
-          htmlFor="specific-location"
-          className="mb-1.5 block text-xs font-medium text-ink flex items-center gap-1.5"
-        >
-          <MapPin size={14} className="text-muted" />
-          <span>3. Exact Spot / Room / Lab / Floor</span>
-        </label>
-
-        <input
-          id="specific-location"
-          type="text"
-          placeholder="e.g. 2nd Floor, Lab 4, near east staircase"
-          value={specificLocation}
-          onChange={handleSpecificLocationChange}
-          className={`block h-11 w-full rounded-md border bg-surface px-3 text-sm text-ink placeholder:text-muted transition-colors duration-150 focus:outline-none focus:ring-2 ${
-            errors.specificLocation
-              ? 'border-danger focus:border-danger focus:ring-danger-50'
-              : 'border-line-strong focus:border-brand-500 focus:ring-brand-100'
-          }`}
-        />
-
-        {errors.specificLocation && (
-          <p className="mt-1 text-xs text-danger font-medium flex items-center gap-1">
-            <AlertCircle size={12} />
-            <span>{errors.specificLocation}</span>
           </p>
         )}
       </div>

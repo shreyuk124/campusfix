@@ -1,20 +1,25 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
-import { FeedPage } from '../features/feed';
+import { LandingPage } from '../features/landing';
+import { DashboardPage } from '../features/dashboard';
 import { IssuesPage } from '../features/issues';
 import { ReportPage } from '../features/report';
-import { StaffPage } from '../features/staff';
+import { FeedPage } from '../features/feed';
 import { AdminPage } from '../features/admin';
 import { LoginPage } from '../features/auth';
+import { SettingsPage } from '../features/settings';
 
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <LandingPage />,
+  },
+  {
     element: <AppLayout />,
     children: [
       {
-        index: true,
-        element: <FeedPage />,
+        path: 'dashboard',
+        element: <DashboardPage />,
       },
       {
         path: 'issues',
@@ -25,16 +30,24 @@ export const router = createBrowserRouter([
         element: <ReportPage />,
       },
       {
-        path: 'staff',
-        element: <StaffPage />,
+        path: 'feed',
+        element: <FeedPage />,
       },
       {
         path: 'admin',
         element: <AdminPage />,
       },
       {
+        path: 'settings',
+        element: <SettingsPage />,
+      },
+      {
         path: 'login',
         element: <LoginPage />,
+      },
+      {
+        path: '*',
+        element: <DashboardPage />,
       },
     ],
   },

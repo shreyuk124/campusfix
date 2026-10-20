@@ -6,6 +6,7 @@ export default function Input({
   label,
   type = 'text',
   helperText,
+  hint,
   error,
   required = false,
   disabled = false,
@@ -14,19 +15,21 @@ export default function Input({
 }) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
+  const descriptionText = hint ?? helperText;
 
   const helperId = `${inputId}-helper`;
   const errorId = `${inputId}-error`;
 
   const describedBy = [
     error ? errorId : null,
-    helperText ? helperId : null,
+    descriptionText ? helperId : null,
+    inputProps['aria-describedby'],
   ]
     .filter(Boolean)
     .join(' ') || undefined;
 
   const inputClasses = [
-    'block h-11 w-full rounded-md border bg-surface px-3',
+    'block h-11 w-full rounded-md border bg-white px-3',
     'text-base text-ink placeholder:text-muted',
     'transition-colors duration-150',
     'focus:outline-none focus:ring-2',
@@ -42,18 +45,20 @@ export default function Input({
 
   return (
     <div className="w-full">
-      <label
-        htmlFor={inputId}
-        className="mb-1 block text-sm font-medium text-ink"
-      >
-        {label}
+      {label && (
+        <label
+          htmlFor={inputId}
+          className="mb-1.5 block text-sm font-medium text-ink"
+        >
+          {label}
 
-        {required && (
-          <span className="ml-1 text-muted">
-            (required)
-          </span>
-        )}
-      </label>
+          {required && (
+            <span className="ml-1 text-muted">
+              (required)
+            </span>
+          )}
+        </label>
+      )}
 
       <input
         {...inputProps}
@@ -66,12 +71,12 @@ export default function Input({
         className={inputClasses}
       />
 
-      {helperText && (
+      {descriptionText && !error && (
         <p
           id={helperId}
-          className="mt-1 text-xs text-muted"
+          className="mt-1.5 text-xs text-muted"
         >
-          {helperText}
+          {descriptionText}
         </p>
       )}
 
@@ -79,10 +84,10 @@ export default function Input({
         <p
           id={errorId}
           role="alert"
-          className="mt-1 flex items-start gap-1 text-xs text-danger"
+          className="mt-1.5 flex items-start gap-1.5 text-sm text-danger"
         >
           <AlertCircle
-            size={14}
+            size={15}
             aria-hidden="true"
             className="mt-0.5 shrink-0"
           />

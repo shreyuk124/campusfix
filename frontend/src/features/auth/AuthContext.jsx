@@ -6,13 +6,22 @@ import { AuthContext } from './context';
 const STORAGE_KEY_USER = 'campusfix_auth_user';
 const STORAGE_KEY_TOKEN = 'token';
 
+const DEFAULT_STUDENT_USER = {
+  id: 'usr-student-419',
+  name: 'Alex Sharma',
+  email: 'alex.sharma@campus.edu',
+  role: 'student',
+  studentId: 'ST-2026-8812',
+  isMock: true,
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
-      return saved ? JSON.parse(saved) : null;
+      return saved ? JSON.parse(saved) : DEFAULT_STUDENT_USER;
     } catch {
-      return null;
+      return DEFAULT_STUDENT_USER;
     }
   });
 

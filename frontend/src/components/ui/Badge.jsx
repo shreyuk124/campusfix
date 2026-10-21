@@ -12,12 +12,10 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react';
-import { STATUS_CONFIG, PRIORITY_BANDS } from '../../lib/constants';
-import { getSlaStatus } from '../../lib/format';
+import { STATUS_CONFIG, PRIORITY_BANDS, getSlaStatus } from '../../lib/statusStyles';
 
 /**
  * StatusBadge - Pill with icon + label
- * Colours from DESIGN.md §2.1
  */
 export function StatusBadge({ status, className = '' }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.Reported;
@@ -64,11 +62,8 @@ export function StatusBadge({ status, className = '' }) {
 
 /**
  * PriorityBadge - Pill with dot/icon + label
- * Low (0–29), Medium (30–54), High (55–74), Critical (75+)
- * Rule from DESIGN.md: Critical is solid red, the only solid-fill badge
  */
 export function PriorityBadge({ priority, score, className = '' }) {
-  // Normalize priority key
   let band = null;
   if (score !== undefined && score !== null) {
     band = PRIORITY_BANDS.find((b) => score >= b.min && score <= b.max);
@@ -77,7 +72,7 @@ export function PriorityBadge({ priority, score, className = '' }) {
     band = PRIORITY_BANDS.find((b) => b.label.toLowerCase() === String(priority).toLowerCase());
   }
   if (!band) {
-    band = PRIORITY_BANDS[0]; // fallback to Low
+    band = PRIORITY_BANDS[0];
   }
 
   const isCritical = band.key === 'critical';
@@ -108,10 +103,9 @@ export function PriorityBadge({ priority, score, className = '' }) {
 
 /**
  * SlaBadge - Clock icon + countdown
- * On track: teal, Due soon: amber, Overdue: red
  */
-export function SlaBadge({ deadline, created, className = '' }) {
-  const { state, label, isOverdue } = getSlaStatus(deadline, created);
+export function SlaBadge({ deadline, className = '' }) {
+  const { state, label, isOverdue } = getSlaStatus(deadline);
 
   let style = {
     bg: '#E3F6F4',

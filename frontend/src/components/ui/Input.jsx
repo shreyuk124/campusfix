@@ -11,6 +11,7 @@ export default function Input({
   required = false,
   disabled = false,
   className = '',
+  endAdornment,
   ...inputProps
 }) {
   const generatedId = useId();
@@ -30,6 +31,7 @@ export default function Input({
 
   const inputClasses = [
     'block h-11 w-full rounded-md border bg-white px-3',
+    endAdornment ? 'pr-11' : '',
     'text-base text-ink placeholder:text-muted',
     'transition-colors duration-150',
     'focus:outline-none focus:ring-2',
@@ -60,16 +62,23 @@ export default function Input({
         </label>
       )}
 
-      <input
-        {...inputProps}
-        id={inputId}
-        type={type}
-        required={required}
-        disabled={disabled}
-        aria-invalid={Boolean(error)}
-        aria-describedby={describedBy}
-        className={inputClasses}
-      />
+      <div className="relative">
+        <input
+          {...inputProps}
+          id={inputId}
+          type={type}
+          required={required}
+          disabled={disabled}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy}
+          className={inputClasses}
+        />
+        {endAdornment && (
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            {endAdornment}
+          </div>
+        )}
+      </div>
 
       {descriptionText && !error && (
         <p

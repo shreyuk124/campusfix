@@ -1,23 +1,25 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  ClipboardList,
+  Inbox,
   PlusCircle,
   Activity,
   Shield,
+  Wrench,
   Settings,
   X,
 } from 'lucide-react';
 
 const primaryLinks = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/issues', label: 'Campus Issues', icon: ClipboardList },
+  { to: '/dashboard', label: 'Authority Overview', icon: LayoutDashboard },
+  { to: '/feed', label: 'Issue Feed', icon: Activity },
+  { to: '/my-issues', label: 'My Issues', icon: Inbox },
   { to: '/report', label: 'Report Issue', icon: PlusCircle },
-  { to: '/feed', label: 'Activity Feed', icon: Activity },
 ];
 
 const portalLinks = [
-  { to: '/admin', label: 'Admin Portal', icon: Shield },
+  { to: '/admin', label: 'Authority Portal', icon: Shield },
+  { to: '/staff', label: 'Staff Queue', icon: Wrench },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -82,7 +84,7 @@ export default function Sidebar({ open, onClose }) {
 
           <div className="space-y-1.5 pt-2 border-t border-line">
             <p className="px-4 text-xs font-semibold uppercase tracking-wider text-muted">
-              Management
+              Portals & Management
             </p>
             {portalLinks.map(({ to, label, icon: Icon }) => (
               <NavLink

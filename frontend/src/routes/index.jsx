@@ -1,13 +1,15 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { LandingPage } from '../features/landing';
 import { DashboardPage } from '../features/dashboard';
-import { IssuesPage } from '../features/issues';
-import { ReportPage } from '../features/report';
 import { FeedPage } from '../features/feed';
+import { MyIssuesPage, IssueDetailPage } from '../features/issues';
+import { ReportPage } from '../features/report';
+import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
-import { LoginPage } from '../features/auth';
 import { SettingsPage } from '../features/settings';
+import { LoginPage, RegisterPage } from '../features/auth';
+import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -22,20 +24,40 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
+        path: 'feed',
+        element: <FeedPage />,
+      },
+      {
+        path: 'my-issues',
+        element: <MyIssuesPage />,
+      },
+      {
         path: 'issues',
-        element: <IssuesPage />,
+        element: <Navigate to="/feed" replace />,
+      },
+      {
+        path: 'issues/:id',
+        element: <IssueDetailPage />,
       },
       {
         path: 'report',
         element: <ReportPage />,
       },
       {
-        path: 'feed',
-        element: <FeedPage />,
+        path: 'admin',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminPage />
+          </ProtectedRoute>
+        ),
       },
       {
-        path: 'admin',
-        element: <AdminPage />,
+        path: 'staff',
+        element: (
+          <ProtectedRoute allowedRoles={['staff', 'admin']}>
+            <StaffPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'settings',
@@ -46,8 +68,12 @@ export const router = createBrowserRouter([
         element: <LoginPage />,
       },
       {
+        path: 'register',
+        element: <RegisterPage />,
+      },
+      {
         path: '*',
-        element: <DashboardPage />,
+        element: <Navigate to="/dashboard" replace />,
       },
     ],
   },

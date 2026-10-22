@@ -12,6 +12,16 @@ const generateRefId = () => {
 };
 
 /**
+ * Helper: Calculates priority band based on accumulated priority score
+ */
+const calculatePriorityBand = (score) => {
+  if (score >= 40) return 'Critical';
+  if (score >= 25) return 'High';
+  if (score >= 15) return 'Medium';
+  return 'Low';
+};
+
+/**
  * @desc    Find active issues in the same building & category for duplicate interception
  * @route   GET /api/v1/issues/similar
  * @access  Public
@@ -185,6 +195,100 @@ export const createIssue = async (req, res, next) => {
     }
 
     // Forward unexpected exceptions to centralized error middleware
+    next(error);
+  }
+};
+
+/**
+ * @desc    Upvote / Re-report an existing issue ("I'm facing this too")
+ * @route   POST /api/v1/issues/:id/reports
+ * @access  Public / Student
+ */
+export const upvoteIssue = async (req, res, next) => {
+  try {
+    // Step 1: Extract and validate issue ID from URL parameters
+    const { id: issueId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(issueId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid issue identifier format.',
+      });
+    }
+
+    // Step 2: Ensure target issue exists and is not already resolved
+    const existingIssue = await Issue.findById(issueId);
+
+    if (!existingIssue) {
+      return res.status(404).json({
+        success: false,
+        message: 'Issue not found.',
+      });
+    }
+
+    if (['Resolved', 'Closed'].includes(existingIssue.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'This issue has already been resolved or closed. Please report a new issue if the problem reoccurred.',
+      });
+    }
+
+    // Step 3: Resolve reporter identity (token user, body user, or mock fallback)
+    const reporterId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
+    const note = req.body.note ? req.body.note.trim() : 'Upvoted by affected student';
+
+    // Step 4: Atomic Anti-Spam Check using Report collection unique index { issue: 1, reporter: 1 }
+    try {
+      await Report.create({
+        issue: existingIssue._id,
+        reporter: reporterId,
+        note,
+      });
+    } catch (createErr) {
+      // MongoDB code 11000 = Duplicate key violation
+      if (createErr.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: 'You have already reported or upvoted this issue.',
+        });
+      }
+      throw createErr;
+    }
+
+    // Step 5: Atomically increment reportCount and priorityScore to prevent race conditions
+    const updatedIssue = await Issue.findByIdAndUpdate(
+      existingIssue._id,
+      {
+        $inc: {
+          reportCount: 1,
+          priorityScore: 5, // add +5 urgency points per affected student
+        },
+      },
+      { new: true } // return the freshly updated document
+    );
+
+    // Step 6: Recalculate and update priorityBand if threshold crossed
+    const newBand = calculatePriorityBand(updatedIssue.priorityScore);
+    if (updatedIssue.priorityBand !== newBand) {
+      updatedIssue.priorityBand = newBand;
+      await updatedIssue.save();
+    }
+
+    // Step 7: Send clean HTTP 200 response
+    return res.status(200).json({
+      success: true,
+      message: 'Issue upvoted successfully.',
+      data: {
+        issueId: updatedIssue._id,
+        refId: updatedIssue.refId,
+        reportCount: updatedIssue.reportCount,
+        priorityScore: updatedIssue.priorityScore,
+        priorityBand: updatedIssue.priorityBand,
+        status: updatedIssue.status,
+      },
+    });
+  } catch (error) {
+    // Forward unexpected errors to the global error middleware
     next(error);
   }
 };

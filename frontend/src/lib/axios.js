@@ -1,15 +1,14 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 
-// Central Axios client pointing to /api/v1 with proxy support
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000,
 });
 
-// Request interceptor: attach bearer token if user is authenticated
+// Request interceptor to attach auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -21,11 +20,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle token expirations gracefully
+// Response interceptor for centralized error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Optional: Clear token and redirect to login if session expires
       localStorage.removeItem('token');
     }
     return Promise.reject(error);

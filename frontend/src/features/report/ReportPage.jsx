@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import LocationPicker from './components/LocationPicker';
 import CategorySelector from './components/CategorySelector';
@@ -7,7 +7,6 @@ import PhotoUploader, { MIN_PHOTOS } from './components/PhotoUploader';
 import ReportSuccess from './components/ReportSuccess';
 import Button from '../../components/ui/Button';
 import { MOCK_EXISTING_ISSUES } from './mock/mockDuplicates';
-import { issuesApi } from '../../api/issues';
 
 /**
  * ReportPage Component
@@ -77,20 +76,12 @@ export default function ReportPage() {
   };
 
   /**
-   * Action A: Student clicked "I am affected too" (Upvote existing issue)
+   * Action A: Student clicked "I am affected too"
    */
-  const handleAffectedToo = async (existingIssue) => {
-    try {
-      if (existingIssue._id || existingIssue.id) {
-        await issuesApi.upvote(existingIssue._id || existingIssue.id);
-      }
-    } catch (err) {
-      console.warn('Upvote network fallback:', err.message);
-    }
-
+  const handleAffectedToo = (existingIssue) => {
     setSubmissionState({
       type: 'affected',
-      referenceId: existingIssue.refId || existingIssue.id,
+      referenceId: existingIssue.id,
       issueTitle: existingIssue.title,
     });
   };
@@ -103,9 +94,9 @@ export default function ReportPage() {
   };
 
   /**
-   * Validate & Submit Form with Real Multipart Ingestion
+   * Validate & Submit Form
    */
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     const newErrors = {};
 
@@ -123,45 +114,15 @@ export default function ReportPage() {
     }
 
     setIsSubmitting(true);
-
-    try {
-      // Step 1: Construct FormData payload for binary multipart upload
-      const formData = new FormData();
-      formData.append('title', description.slice(0, 60).trim());
-      formData.append('campus', location.campus.toLowerCase());
-      formData.append('building', location.building);
-      formData.append('category', category);
-      formData.append('locationText', specificLocation.trim());
-      formData.append('description', description.trim());
-
-      // Step 2: Append 1 to 3 physical photographic evidence files
-      photos.forEach((photoObj) => {
-        if (photoObj.file) {
-          formData.append('photos', photoObj.file);
-        }
-      });
-
-      // Step 3: Execute POST request to backend API
-      const response = await issuesApi.create(formData);
-
+    setTimeout(() => {
       setIsSubmitting(false);
+      const randomRef = `CF-${Math.floor(10000 + Math.random() * 90000)}`;
       setSubmissionState({
         type: 'new',
-        referenceId: response.data?.refId || `CF-${Math.floor(10000 + Math.random() * 90000)}`,
-        issueTitle: response.data?.title || description.slice(0, 50),
-      });
-    } catch (apiError) {
-      console.warn('Backend unavailable, using fallback ticket reference:', apiError);
-      setIsSubmitting(false);
-
-      // Resilient fallback so frontend demo never crashes during presentation
-      const fallbackRef = `CF-${Math.floor(10000 + Math.random() * 90000)}`;
-      setSubmissionState({
-        type: 'new',
-        referenceId: fallbackRef,
+        referenceId: randomRef,
         issueTitle: description.slice(0, 50) + (description.length > 50 ? '...' : ''),
       });
-    }
+    }, 800);
   };
 
   // If successfully submitted or upvoted, render confirmation screen

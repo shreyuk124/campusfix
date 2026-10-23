@@ -1,15 +1,14 @@
-// components/layout/Navbar.jsx - Conforms to DESIGN.md §3.1 & §3.3
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import {
   Wrench,
   Compass,
   Inbox,
+  LayoutDashboard,
   PlusCircle,
   Shield,
   User,
   LogOut,
-  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
 
@@ -27,7 +26,10 @@ export default function Navbar() {
     <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-content items-center justify-between px-4 sm:px-6">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg">
+        <Link
+          to="/"
+          className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg"
+        >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
             <Wrench size={20} strokeWidth={2.25} />
           </span>
@@ -48,6 +50,10 @@ export default function Navbar() {
           <NavLink to="/my-issues" className={navLinkClass}>
             <Inbox size={16} />
             <span>My Issues</span>
+          </NavLink>
+          <NavLink to="/dashboard" className={navLinkClass}>
+            <LayoutDashboard size={16} />
+            <span>Dashboard</span>
           </NavLink>
           <NavLink to="/report" className={navLinkClass}>
             <PlusCircle size={16} />

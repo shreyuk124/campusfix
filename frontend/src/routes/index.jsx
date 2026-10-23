@@ -1,25 +1,27 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
+import { LandingPage } from '../features/landing';
+import { DashboardPage } from '../features/dashboard';
 import { FeedPage } from '../features/feed';
 import { MyIssuesPage, IssueDetailPage } from '../features/issues';
 import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
+import { SettingsPage } from '../features/settings';
 import { LoginPage, RegisterPage } from '../features/auth';
 import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <LandingPage />,
+  },
+  {
     element: <AppLayout />,
     children: [
       {
-        index: true,
-        element: (
-          <ProtectedRoute>
-            <Navigate to="/feed" replace />
-          </ProtectedRoute>
-        ),
+        path: 'dashboard',
+        element: <DashboardPage />,
       },
       {
         path: 'feed',
@@ -78,6 +80,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'login',
         element: <LoginPage />,
       },
@@ -92,3 +102,5 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+export default router;

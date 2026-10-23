@@ -4,6 +4,7 @@ import React from 'react';
 export function Skeleton({ className = '', ...props }) {
   return (
     <div
+      aria-hidden="true"
       className={`animate-pulse rounded-md bg-stone-200/70 ${className}`}
       {...props}
     />
@@ -73,6 +74,29 @@ export function IssueDetailSkeleton() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export const DetailSkeleton = IssueDetailSkeleton;
+
+export function TableRowSkeleton() {
+  return (
+    <div className="flex items-center gap-4 py-3 border-b border-line">
+      <Skeleton className="h-4 w-1/4 rounded" />
+      <Skeleton className="h-4 w-1/4 rounded" />
+      <Skeleton className="h-4 w-1/4 rounded" />
+      <Skeleton className="h-4 w-1/4 rounded" />
+    </div>
+  );
+}
+
+export function SkeletonList({ count = 3, Component = IssueCardSkeleton }) {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <Component key={i} />
+      ))}
     </div>
   );
 }

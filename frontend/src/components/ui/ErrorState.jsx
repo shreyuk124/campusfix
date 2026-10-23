@@ -1,14 +1,19 @@
-// components/ui/ErrorState.jsx - Error card matching DESIGN.md §4.14
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import Button from './Button';
 
 export function ErrorState({
   title = 'Unable to load campus reports',
-  message = 'A temporary error occurred while fetching issues. Please check your network connection and try again.',
+  message,
+  description,
   onRetry,
   className = '',
 }) {
+  const bodyText =
+    message ||
+    description ||
+    'A temporary error occurred while fetching issues. Please check your network connection and try again.';
+
   return (
     <div
       role="alert"
@@ -18,7 +23,7 @@ export function ErrorState({
         <AlertCircle size={24} strokeWidth={2} />
       </div>
       <h3 className="text-base font-bold text-danger">{title}</h3>
-      <p className="mt-1.5 text-sm text-body/80 max-w-md mx-auto">{message}</p>
+      <p className="mt-1.5 text-sm text-body/80 max-w-md mx-auto leading-relaxed">{bodyText}</p>
       {onRetry && (
         <div className="mt-5 flex justify-center">
           <Button

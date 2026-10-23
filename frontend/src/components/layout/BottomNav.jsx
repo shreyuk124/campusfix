@@ -1,7 +1,6 @@
-// components/layout/BottomNav.jsx - Mobile fixed bottom tab bar conforming to DESIGN.md §3.1
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Compass, Inbox, Plus, Shield, User } from 'lucide-react';
+import { Compass, Inbox, Plus, LayoutDashboard, Shield, User } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
 
 export function BottomNav() {
@@ -14,7 +13,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden shadow-modal"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden shadow-modal"
       aria-label="Mobile Navigation Bar"
     >
       <div className="mx-auto flex h-16 max-w-md items-center justify-around px-2">
@@ -40,6 +39,12 @@ export function BottomNav() {
             <Plus size={24} strokeWidth={2.5} />
           </div>
           <span className="text-[10px] font-bold text-brand-600 mt-1">Report</span>
+        </NavLink>
+
+        {/* Authority Dashboard */}
+        <NavLink to="/dashboard" className={getTabClass}>
+          <LayoutDashboard size={20} className="mb-0.5" />
+          <span>Dashboard</span>
         </NavLink>
 
         {/* Admin Dashboard - Only for Admin */}

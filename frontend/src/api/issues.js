@@ -1,4 +1,4 @@
-﻿import api from '../lib/axios';
+import api from '../lib/axios';
 
 export const issuesApi = {
   // 1. Live duplicate check: Search open issues by location and category
@@ -11,10 +11,11 @@ export const issuesApi = {
 
   // 2. Submit new issue with 1-3 photo evidence files (multipart/form-data)
   create: async (formData) => {
+    const isFormData = typeof FormData !== 'undefined' && formData instanceof FormData;
     const response = await api.post('/issues', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: isFormData
+        ? { 'Content-Type': 'multipart/form-data' }
+        : { 'Content-Type': 'application/json' },
     });
     return response.data;
   },
@@ -43,3 +44,5 @@ export const issuesApi = {
     return response.data;
   },
 };
+
+export default issuesApi;

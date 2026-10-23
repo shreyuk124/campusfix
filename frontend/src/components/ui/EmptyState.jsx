@@ -1,4 +1,3 @@
-// components/ui/EmptyState.jsx - Friendly empty state with illustration and CTA
 import React from 'react';
 import { SearchX, Inbox, CheckCircle, PlusCircle } from 'lucide-react';
 import Button from './Button';

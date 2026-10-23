@@ -4,22 +4,20 @@ import { Plus } from 'lucide-react';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
-import { useAuth } from '../../features/auth/useAuth';
 
 /**
  * AppLayout Component
- * Acts as the master wrapper/frame for every page in CampusFix.
+ * Master application shell for CampusFix.
  * Combines top Navbar, page Outlet, Footer, mobile BottomNav,
  * and desktop Floating Action Button (FAB) for quick reporting.
  */
 export default function AppLayout() {
-  const { isAuthenticated } = useAuth();
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isReportPage = location.pathname === '/report';
 
-  // When unauthenticated or on login/register pages, show only the login page
-  if (!isAuthenticated || isAuthPage) {
+  // On login/register pages, show centered card layout without navigation chrome
+  if (isAuthPage) {
     return (
       <div className="flex min-h-screen flex-col bg-canvas text-body">
         <main className="mx-auto flex w-full max-w-content flex-1 items-center justify-center px-4 py-8">

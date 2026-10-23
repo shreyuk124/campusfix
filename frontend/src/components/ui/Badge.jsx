@@ -68,17 +68,18 @@ export function StatusBadge({ status, className = '' }) {
  * Low (0–29), Medium (30–54), High (55–74), Critical (75+)
  * Rule from DESIGN.md: Critical is solid red, the only solid-fill badge
  */
-export function PriorityBadge({ priority, score, className = '' }) {
+export function PriorityBadge({ priority, className = '' }) {
   // Normalize priority key
   let band = null;
-  if (score !== undefined && score !== null) {
-    band = PRIORITY_BANDS.find((b) => score >= b.min && score <= b.max);
-  }
-  if (!band && priority) {
-    band = PRIORITY_BANDS.find((b) => b.label.toLowerCase() === String(priority).toLowerCase());
+  if (priority) {
+    band = PRIORITY_BANDS.find(
+      (b) =>
+        b.label.toLowerCase() === String(priority).toLowerCase() ||
+        b.key.toLowerCase() === String(priority).toLowerCase()
+    );
   }
   if (!band) {
-    band = PRIORITY_BANDS[0]; // fallback to Low
+    band = PRIORITY_BANDS[1]; // fallback to Medium
   }
 
   const isCritical = band.key === 'critical';

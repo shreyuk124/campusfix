@@ -79,7 +79,6 @@ export function IssueCard({
     category,
     status = 'Reported',
     priority = 'Medium',
-    priorityScore,
     slaDeadline,
     createdAt,
     updatedAt,
@@ -167,7 +166,7 @@ export function IssueCard({
         {/* Badges Row */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
           <StatusBadge status={status} />
-          <PriorityBadge priority={priority} score={priorityScore} />
+          <PriorityBadge priority={priority} />
           {slaDeadline && <SlaBadge deadline={slaDeadline} created={createdAt} />}
           {isHotspot && <HotspotBadge />}
           {isReporter && (

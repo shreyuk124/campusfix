@@ -35,7 +35,6 @@ import {
   StatusStepper,
   Timeline,
   PhotoGallery,
-  PriorityExplainer,
   getCategoryIcon,
 } from './components';
 import issuesService from './issuesService';
@@ -311,7 +310,7 @@ export default function IssueDetailPage() {
         {/* Badges Row */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line/60">
           <StatusBadge status={issue.status} />
-          <PriorityBadge priority={issue.priority} score={issue.priorityScore} />
+          <PriorityBadge priority={issue.priority} />
           {issue.slaDeadline && <SlaBadge deadline={issue.slaDeadline} created={issue.createdAt} />}
           {issue.isHotspot && <HotspotBadge />}
           {issue.isSafetyRisk && (
@@ -442,7 +441,7 @@ export default function IssueDetailPage() {
             </div>
 
             <p className="text-xs text-muted leading-relaxed">
-              When multiple students flag the same problem, our triage system automatically raises the priority score.
+              When multiple students flag the same problem, it signals higher community urgency to the estate maintenance team.
             </p>
 
             <Button
@@ -514,12 +513,6 @@ export default function IssueDetailPage() {
             </div>
           </div>
 
-          {/* Collapsible Priority Explainer */}
-          <PriorityExplainer
-            priority={issue.priority}
-            priorityScore={issue.priorityScore}
-            priorityBreakdown={issue.priorityBreakdown}
-          />
         </div>
       </div>
 

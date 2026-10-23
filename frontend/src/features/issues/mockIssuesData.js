@@ -1,5 +1,4 @@
-// features/issues/mockIssuesData.js - Realistic seed data conforming to PRD and DESIGN.md
-
+// features/issues/mockIssuesData.js - Realistic seed data conforming to COEP University
 export const INITIAL_ISSUES = [
   {
     id: 'cf-0042',
@@ -8,11 +7,10 @@ export const INITIAL_ISSUES = [
     description:
       'The left faucet in the washroom has snapped at the neck valve. High pressure water is continuously spraying onto the floor, causing waterlogging and making the entrance slippery.',
     category: 'Plumbing',
-    building: 'North Academic Block',
+    building: 'Academic Complex',
     location: '2nd Floor, East Wing Male Washroom (near Room 204)',
     status: 'In Progress',
     priority: 'High',
-    priorityScore: 68,
     isSafetyRisk: false,
     isHotspot: false,
     affectedCount: 14,
@@ -43,7 +41,7 @@ export const INITIAL_ISSUES = [
         fromStatus: 'Reported',
         toStatus: 'Assigned',
         actor: { name: 'Dr. Sharma (Estate Admin)', role: 'admin' },
-        note: 'Triaged and assigned to Plumbing & Water Services. Priority calculated as High based on location and reports.',
+        note: 'Triaged and assigned to Plumbing & Water Services. Priority marked as High based on reported severity.',
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 14).toISOString(),
       },
       {
@@ -56,14 +54,6 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 25,
-      affectedFactor: 21,
-      safetyBonus: 0,
-      ageFactor: 22,
-      totalScore: 68,
-      band: 'High (55–74 points, 24h SLA)',
-    },
   },
 
   {
@@ -73,11 +63,10 @@ export const INITIAL_ISSUES = [
     description:
       'The center ceiling fan regulator sparks upon speed adjustment and wobbles excessively on its mount rod. Potential hazard to students sitting directly below rows 4–6.',
     category: 'Electrical',
-    building: 'Main Academic Building',
+    building: 'Main Heritage Building',
     location: '3rd Floor, Lecture Hall LH-302',
     status: 'Assigned',
     priority: 'Critical',
-    priorityScore: 88,
     isSafetyRisk: true,
     isHotspot: false,
     affectedCount: 32,
@@ -107,18 +96,10 @@ export const INITIAL_ISSUES = [
         fromStatus: 'Reported',
         toStatus: 'Assigned',
         actor: { name: 'Estate Office Triage', role: 'admin' },
-        note: 'Escalated to Critical Priority (+25 safety penalty). Assigned to Lead Electrician Anil Desai.',
+        note: 'Escalated to Critical Priority due to active electrical safety hazard. Assigned to Lead Electrician Anil Desai.',
         timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 30,
-      affectedFactor: 25,
-      safetyBonus: 25,
-      ageFactor: 8,
-      totalScore: 88,
-      band: 'Critical (75+ points, 4h SLA)',
-    },
   },
 
   {
@@ -128,11 +109,10 @@ export const INITIAL_ISSUES = [
     description:
       'Organic food waste bins outside the dining hall annex have not been cleared. Stray animals are scattering trash across the walkway and the storm drain is obstructed.',
     category: 'Cleanliness',
-    building: 'Campus Dining Hall',
+    building: 'Hostel Mess & Dining Hall',
     location: 'North Entrance staircase facing open lawn',
     status: 'Resolved',
     priority: 'Low',
-    priorityScore: 24,
     isSafetyRisk: false,
     isHotspot: false,
     affectedCount: 8,
@@ -187,28 +167,19 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 10,
-      affectedFactor: 8,
-      safetyBonus: 0,
-      ageFactor: 6,
-      totalScore: 24,
-      band: 'Low (0–29 points, 168h SLA)',
-    },
   },
 
   {
     id: 'cf-0029',
     referenceId: 'CF-2026-0029',
-    title: 'Wi-Fi access point offline across Hostel Block B 3rd Floor',
+    title: 'Wi-Fi access point offline across Hostel Block H 3rd Floor',
     description:
       'The Aruba AP on ceiling outside Room 314 has had a flashing red diagnostic light since yesterday evening. No SSID broadcast for eduroam or CampusNet.',
     category: 'Internet',
-    building: 'Hostel Block B (Boys)',
-    location: '3rd Floor corridor, ceiling mount outside Room 314',
+    building: 'Boys Hostel Complex (Blocks C–J)',
+    location: 'Block H corridor, ceiling mount outside Room 314',
     status: 'Reported',
     priority: 'Medium',
-    priorityScore: 48,
     isSafetyRisk: false,
     isHotspot: true, // Recurring hotspot
     affectedCount: 46,
@@ -233,14 +204,6 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 20,
-      affectedFactor: 28,
-      safetyBonus: 0,
-      ageFactor: 0,
-      totalScore: 48,
-      band: 'Medium (30–54 points, 72h SLA)',
-    },
   },
 
   {
@@ -250,11 +213,10 @@ export const INITIAL_ISSUES = [
     description:
       'During guest lectures and presentations, the ceiling mounted projector cuts to a magenta tint every few minutes. Lamp hours warning indicator is glowing orange.',
     category: 'Electrical',
-    building: 'Student Activity Centre',
-    location: 'Ground Floor, Audio-Visual Seminar Hall B',
+    building: 'Boat Club',
+    location: 'Ground Floor, Audio-Visual Meeting Hall',
     status: 'Resolved',
     priority: 'Medium',
-    priorityScore: 42,
     isSafetyRisk: false,
     isHotspot: false,
     affectedCount: 19,
@@ -309,14 +271,6 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 20,
-      affectedFactor: 16,
-      safetyBonus: 0,
-      ageFactor: 6,
-      totalScore: 42,
-      band: 'Medium (30–54 points, 72h SLA)',
-    },
   },
 
   {
@@ -326,11 +280,10 @@ export const INITIAL_ISSUES = [
     description:
       'The wall bracket bolts have worked loose from the brick mortar. When leaned on, the rail shifts over 4 inches toward the stairwell edge.',
     category: 'Safety',
-    building: 'South Academic Block',
-    location: 'Staircase between 3rd and 4th floors (West Fire Exit)',
+    building: 'Electrical Engineering Building',
+    location: 'Staircase between 1st and 2nd floors (West Fire Exit)',
     status: 'Reported',
     priority: 'High',
-    priorityScore: 72,
     isSafetyRisk: true,
     isHotspot: false,
     affectedCount: 23,
@@ -355,14 +308,6 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 35,
-      affectedFactor: 12,
-      safetyBonus: 25,
-      ageFactor: 0,
-      totalScore: 72,
-      band: 'High (55–74 points, 24h SLA)',
-    },
   },
 
   {
@@ -372,11 +317,10 @@ export const INITIAL_ISSUES = [
     description:
       'The wooden armrest has broken off, exposing sharp rusted metal brackets that tore a student backpack.',
     category: 'Furniture',
-    building: 'North Academic Block',
-    location: '1st Floor, Classroom N-105, Row 3 Seat D',
+    building: 'Computer Engineering & IT Building',
+    location: '1st Floor, Class Lab 102, Row 3 Seat D',
     status: 'Closed',
     priority: 'Low',
-    priorityScore: 22,
     isSafetyRisk: false,
     isHotspot: false,
     affectedCount: 5,
@@ -430,14 +374,6 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 10,
-      affectedFactor: 6,
-      safetyBonus: 0,
-      ageFactor: 6,
-      totalScore: 22,
-      band: 'Low (0–29 points, 168h SLA)',
-    },
   },
 
   {
@@ -451,7 +387,6 @@ export const INITIAL_ISSUES = [
     location: '2nd Floor, Reference Section drinking water point',
     status: 'In Progress',
     priority: 'Medium',
-    priorityScore: 38,
     isSafetyRisk: false,
     isHotspot: true,
     affectedCount: 27,
@@ -494,13 +429,5 @@ export const INITIAL_ISSUES = [
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
       },
     ],
-    priorityBreakdown: {
-      categoryWeight: 20,
-      affectedFactor: 18,
-      safetyBonus: 0,
-      ageFactor: 0,
-      totalScore: 38,
-      band: 'Medium (30–54 points, 72h SLA)',
-    },
   },
 ];

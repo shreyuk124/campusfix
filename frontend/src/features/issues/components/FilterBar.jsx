@@ -121,7 +121,7 @@ export function FilterBar({
             <select
               value={filters.building}
               onChange={(e) => handleChange('building', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100"
+              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Filter by building"
             >
               <option value="all">All Buildings</option>
@@ -136,7 +136,7 @@ export function FilterBar({
             <select
               value={filters.category}
               onChange={(e) => handleChange('category', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100"
+              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Filter by category"
             >
               <option value="all">All Categories</option>
@@ -152,7 +152,7 @@ export function FilterBar({
               <select
                 value={filters.status}
                 onChange={(e) => handleChange('status', e.target.value)}
-                className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100"
+                className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
                 aria-label="Filter by status"
               >
                 <option value="all">All Statuses</option>
@@ -168,7 +168,7 @@ export function FilterBar({
             <select
               value={filters.priority}
               onChange={(e) => handleChange('priority', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface px-3 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100"
+              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Filter by priority"
             >
               <option value="all">All Priorities</option>
@@ -327,7 +327,7 @@ export function FilterBar({
               <select
                 value={filters.building}
                 onChange={(e) => handleChange('building', e.target.value)}
-                className="w-full h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+                className="w-full h-11 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
               >
                 <option value="all">All Buildings</option>
                 {CAMPUS_BUILDINGS.map((b) => (
@@ -347,7 +347,7 @@ export function FilterBar({
               <select
                 value={filters.category}
                 onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+                className="w-full h-11 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
               >
                 <option value="all">All Categories</option>
                 {CATEGORIES.map((c) => (
@@ -368,7 +368,7 @@ export function FilterBar({
                 <select
                   value={filters.status}
                   onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+                  className="w-full h-11 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
                 >
                   <option value="all">All Statuses</option>
                   {STATUSES.map((s) => (
@@ -389,7 +389,7 @@ export function FilterBar({
               <select
                 value={filters.priority}
                 onChange={(e) => handleChange('priority', e.target.value)}
-                className="w-full h-11 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+                className="w-full h-11 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
               >
                 <option value="all">All Priorities</option>
                 {PRIORITY_BANDS.map((p) => (

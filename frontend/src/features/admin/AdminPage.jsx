@@ -298,7 +298,7 @@ export default function AdminPage() {
             <select
               value={assignedTeam}
               onChange={(e) => setAssignedTeam(e.target.value)}
-              className="w-full h-10 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+              className="w-full h-10 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
             >
               <option value="Plumbing & Water Services">Plumbing & Water Services</option>
               <option value="Electrical Works Team">Electrical Works Team</option>

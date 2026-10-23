@@ -1,7 +1,7 @@
 // features/issues/issuesService.js - In-memory and localStorage issue management service
 import { INITIAL_ISSUES } from './mockIssuesData';
 
-const STORAGE_KEY = 'campusfix_mock_issues_v1';
+const STORAGE_KEY = 'campusfix_coep_issues_v2';
 
 class IssuesService {
   constructor() {
@@ -121,7 +121,10 @@ class IssuesService {
         return (b.affectedCount || 0) - (a.affectedCount || 0);
       }
       if (sort === 'highest-priority') {
-        return (b.priorityScore || 0) - (a.priorityScore || 0);
+        const order = { critical: 4, high: 3, medium: 2, low: 1 };
+        const pA = order[String(a.priority || '').toLowerCase()] || 0;
+        const pB = order[String(b.priority || '').toLowerCase()] || 0;
+        return pB - pA;
       }
       if (sort === 'due-soon') {
         const timeA = a.slaDeadline ? new Date(a.slaDeadline).getTime() : Infinity;
@@ -183,11 +186,6 @@ class IssuesService {
     const nowJoined = !issue.hasJoined;
     issue.hasJoined = nowJoined;
     issue.affectedCount = Math.max(1, (issue.affectedCount || 1) + (nowJoined ? 1 : -1));
-
-    // Update score recalculation factor slightly
-    if (issue.priorityScore) {
-      issue.priorityScore = Math.min(99, Math.max(10, issue.priorityScore + (nowJoined ? 2 : -2)));
-    }
 
     issues[index] = issue;
     this.saveIssues(issues);

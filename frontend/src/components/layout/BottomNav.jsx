@@ -2,8 +2,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Compass, Inbox, Plus, Shield, User } from 'lucide-react';
+import { useAuth } from '../../features/auth/useAuth';
 
 export function BottomNav() {
+  const { user } = useAuth();
+
   const getTabClass = ({ isActive }) =>
     `flex flex-col items-center justify-center py-2 px-3 text-[11px] font-medium transition-colors ${
       isActive ? 'text-brand-600 font-bold' : 'text-muted hover:text-ink'
@@ -39,17 +42,21 @@ export function BottomNav() {
           <span className="text-[10px] font-bold text-brand-600 mt-1">Report</span>
         </NavLink>
 
-        {/* Admin Dashboard */}
-        <NavLink to="/admin" className={getTabClass}>
-          <Shield size={20} className="mb-0.5" />
-          <span>Admin</span>
-        </NavLink>
+        {/* Admin Dashboard - Only for Admin */}
+        {user?.role === 'admin' && (
+          <NavLink to="/admin" className={getTabClass}>
+            <Shield size={20} className="mb-0.5" />
+            <span>Admin</span>
+          </NavLink>
+        )}
 
-        {/* Profile / Auth */}
-        <NavLink to="/login" className={getTabClass}>
-          <User size={20} className="mb-0.5" />
-          <span>Account</span>
-        </NavLink>
+        {/* Staff Dashboard - Only for Staff */}
+        {user?.role === 'staff' && (
+          <NavLink to="/staff" className={getTabClass}>
+            <User size={20} className="mb-0.5" />
+            <span>Staff</span>
+          </NavLink>
+        )}
       </div>
     </nav>
   );

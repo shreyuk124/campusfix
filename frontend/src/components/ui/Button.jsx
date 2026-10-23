@@ -1,3 +1,4 @@
+import React from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 const variants = {
@@ -5,6 +6,8 @@ const variants = {
     'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700',
   secondary:
     'border border-line-strong bg-white text-ink hover:bg-brand-50',
+  outline:
+    'border border-line-strong bg-transparent text-ink hover:bg-surface-muted',
   ghost:
     'bg-transparent text-brand-500 hover:bg-brand-50',
   danger:
@@ -19,7 +22,7 @@ const sizes = {
   lg: 'min-h-[52px] px-5 text-base',
 };
 
-export default function Button({
+export function Button({
   children,
   variant = 'primary',
   size = 'md',
@@ -55,7 +58,7 @@ export default function Button({
       {loading && (
         <LoaderCircle
           size={18}
-          className="animate-spin"
+          className="animate-spin shrink-0"
           aria-hidden="true"
         />
       )}
@@ -63,3 +66,5 @@ export default function Button({
     </button>
   );
 }
+
+export default Button;

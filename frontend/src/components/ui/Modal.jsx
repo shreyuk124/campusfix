@@ -1,5 +1,5 @@
 // components/ui/Modal.jsx - Accessible Modal / Mobile Bottom Sheet conforming to DESIGN.md §4.12
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export function Modal({

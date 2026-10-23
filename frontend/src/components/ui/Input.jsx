@@ -1,7 +1,7 @@
-import { useId } from 'react';
+import React, { useId } from 'react';
 import { AlertCircle } from 'lucide-react';
 
-export default function Input({
+export function Input({
   id,
   label,
   type = 'text',
@@ -35,11 +35,10 @@ export default function Input({
     'text-base text-ink placeholder:text-muted',
     'transition-colors duration-150',
     'focus:outline-none focus:ring-2',
+    'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted',
     error
       ? 'border-danger focus:border-danger focus:ring-danger-50'
       : 'border-line-strong focus:border-brand-500 focus:ring-brand-100',
-    'disabled:cursor-not-allowed disabled:bg-surface-muted',
-    'disabled:text-muted',
     className,
   ]
     .filter(Boolean)
@@ -73,6 +72,7 @@ export default function Input({
           aria-describedby={describedBy}
           className={inputClasses}
         />
+
         {endAdornment && (
           <div className="absolute inset-y-0 right-0 flex items-center pr-3">
             {endAdornment}
@@ -80,10 +80,10 @@ export default function Input({
         )}
       </div>
 
-      {descriptionText && !error && (
+      {descriptionText && (
         <p
           id={helperId}
-          className="mt-1.5 text-xs text-muted"
+          className="mt-1 text-xs text-muted"
         >
           {descriptionText}
         </p>
@@ -106,3 +106,5 @@ export default function Input({
     </div>
   );
 }
+
+export default Input;

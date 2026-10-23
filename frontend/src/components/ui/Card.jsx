@@ -1,4 +1,6 @@
-export default function Card({
+import React from 'react';
+
+export function Card({
   children,
   as: Component = 'div',
   title,
@@ -33,3 +35,5 @@ export default function Card({
     </Component>
   );
 }
+
+export default Card;

@@ -1,41 +1,44 @@
-import { AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import Button from './Button';
 
-export default function ErrorState({
-  title = 'Something went wrong',
-  description = "We couldn't load this information. Please try again.",
+export function ErrorState({
+  title = 'Unable to load campus reports',
+  message,
+  description,
   onRetry,
+  className = '',
 }) {
+  const bodyText =
+    message ||
+    description ||
+    'A temporary error occurred while fetching issues. Please check your network connection and try again.';
+
   return (
     <div
       role="alert"
-      className="rounded-lg border border-red-200 bg-danger-50 p-5"
+      className={`rounded-xl border border-danger-border bg-danger-50 p-6 sm:p-8 text-center ${className}`}
     >
-      <div className="flex items-start gap-3">
-        <AlertTriangle
-          size={21}
-          className="mt-0.5 shrink-0 text-danger"
-          aria-hidden="true"
-        />
-
-        <div>
-          <h3 className="font-semibold text-ink">{title}</h3>
-          <p className="mt-1 text-sm leading-6 text-body">
-            {description}
-          </p>
-
-          {onRetry && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-4"
-              onClick={onRetry}
-            >
-              Try again
-            </Button>
-          )}
-        </div>
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger mb-3">
+        <AlertCircle size={24} strokeWidth={2} />
       </div>
+      <h3 className="text-base font-bold text-danger">{title}</h3>
+      <p className="mt-1.5 text-sm text-body/80 max-w-md mx-auto leading-relaxed">{bodyText}</p>
+      {onRetry && (
+        <div className="mt-5 flex justify-center">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onRetry}
+            className="border-danger/30 text-danger hover:bg-danger/10 inline-flex items-center gap-1.5"
+          >
+            <RefreshCw size={14} />
+            <span>Try again</span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
+
+export default ErrorState;

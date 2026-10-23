@@ -1,7 +1,9 @@
 // components/ui/Toast.jsx - Toast notification provider conforming to DESIGN.md §4.13
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { ToastContext } from './useToast';
+
+export { useToast } from './useToast';
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);

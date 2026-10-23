@@ -1,14 +1,15 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { LandingPage } from '../features/landing';
 import { DashboardPage } from '../features/dashboard';
-import { IssuesPage } from '../features/issues';
-import { ReportPage } from '../features/report';
 import { FeedPage } from '../features/feed';
-import { AdminPage } from '../features/admin';
+import { MyIssuesPage, IssueDetailPage } from '../features/issues';
+import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
-import { LoginPage } from '../features/auth';
+import { AdminPage } from '../features/admin';
 import { SettingsPage } from '../features/settings';
+import { LoginPage, RegisterPage } from '../features/auth';
+import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -23,37 +24,83 @@ export const router = createBrowserRouter([
         element: <DashboardPage />,
       },
       {
+        path: 'feed',
+        element: (
+          <ProtectedRoute>
+            <FeedPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'my-issues',
+        element: (
+          <ProtectedRoute>
+            <MyIssuesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'issues',
-        element: <IssuesPage />,
+        element: (
+          <ProtectedRoute>
+            <MyIssuesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'issues/:id',
+        element: (
+          <ProtectedRoute>
+            <IssueDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'report',
-        element: <ReportPage />,
-      },
-      {
-        path: 'feed',
-        element: <FeedPage />,
-      },
-      {
-        path: 'admin',
-        element: <AdminPage />,
+        element: (
+          <ProtectedRoute>
+            <ReportPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'staff',
-        element: <StaffPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['staff', 'admin']}>
+            <StaffPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'login',
         element: <LoginPage />,
       },
       {
+        path: 'register',
+        element: <RegisterPage />,
+      },
+      {
         path: '*',
-        element: <DashboardPage />,
+        element: <Navigate to="/feed" replace />,
       },
     ],
   },
 ]);
+
+export default router;

@@ -79,10 +79,10 @@ export const STATUS_CONFIG = {
 };
 
 export const PRIORITY_BANDS = [
-  { key: 'low', label: 'Low', slaHours: 168, fg: '#15803D', bg: '#E4F6EA', dot: '#22A559' },
-  { key: 'medium', label: 'Medium', slaHours: 72, fg: '#8A6A00', bg: '#FFF5CC', dot: '#E0B000' },
-  { key: 'high', label: 'High', slaHours: 24, fg: '#B8500A', bg: '#FFE9D6', dot: '#ED7D1E' },
-  { key: 'critical', label: 'Critical', slaHours: 4, fg: '#FFFFFF', bg: '#D92D20', dot: '#D92D20' },
+  { key: 'low', label: 'Low', min: 0, max: 29, slaHours: 168, fg: '#15803D', bg: '#E4F6EA', dot: '#22A559' },
+  { key: 'medium', label: 'Medium', min: 30, max: 54, slaHours: 72, fg: '#8A6A00', bg: '#FFF5CC', dot: '#E0B000' },
+  { key: 'high', label: 'High', min: 55, max: 74, slaHours: 24, fg: '#B8500A', bg: '#FFE9D6', dot: '#ED7D1E' },
+  { key: 'critical', label: 'Critical', min: 75, max: Infinity, slaHours: 4, fg: '#FFFFFF', bg: '#D92D20', dot: '#D92D20' },
 ];
 
 export const CATEGORIES = [
@@ -113,10 +113,11 @@ export const CAMPUS_BUILDINGS = [
   'Main Auditorium',
   'Boat Club',
   'COEP Gymkhana & Ground',
-  'Boys Hostel Complex (Blocks C–J)',
-  'Girls Hostel Complex (GHB & Blocks A–B)',
-  'Hostel Mess & Dining Hall',
   'COEP Canteen / Meta Canteen',
+  'North Academic Block',
+  'South Academic Block',
+  'Student Activity Centre',
+  'Campus Dining Hall',
 ];
 
 export const MAX_REPORTS_PER_DAY = 10;

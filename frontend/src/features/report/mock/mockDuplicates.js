@@ -53,16 +53,4 @@ export const MOCK_EXISTING_ISSUES = [
     affectedCount: 2,
     reportedAt: '2 days ago',
   },
-  {
-    id: 'CF-1012',
-    title: 'Solar water heater low pressure in 2nd floor showers',
-    category: 'plumbing',
-    campus: 'hostel',
-    building: 'Boys Hostel Complex (Blocks C–J)',
-    specificLocation: 'Block H, 2nd Floor Common Bathrooms',
-    status: 'progress',
-    statusLabel: 'In Progress',
-    affectedCount: 18,
-    reportedAt: '3 hours ago',
-  },
 ];

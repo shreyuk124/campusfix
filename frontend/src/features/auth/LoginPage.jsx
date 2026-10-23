@@ -6,10 +6,12 @@ import {
   Wrench,
   GraduationCap,
   Shield,
+  HardHat,
   AlertCircle,
   CheckCircle2,
   Lock,
   ArrowRight,
+  Zap,
   X,
 } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
@@ -60,6 +62,9 @@ export default function LoginPage() {
     if (selectedRole === 'student') {
       setValue('email', 'alex.student@campus.edu', { shouldValidate: true });
       setValue('password', 'CampusPass2026!', { shouldValidate: true });
+    } else if (selectedRole === 'staff') {
+      setValue('email', 'rajesh.electrician@campusfix.edu', { shouldValidate: true });
+      setValue('password', 'StaffPass2026!', { shouldValidate: true });
     } else {
       setValue('email', 'sarah.admin@campusfix.edu', { shouldValidate: true });
       setValue('password', 'AdminSecret2026!', { shouldValidate: true });
@@ -83,8 +88,10 @@ export default function LoginPage() {
           navigate(fromLocation, { replace: true });
         } else if (loggedUser.role === 'admin') {
           navigate('/admin', { replace: true });
+        } else if (loggedUser.role === 'staff') {
+          navigate('/staff', { replace: true });
         } else {
-          navigate('/', { replace: true });
+          navigate('/feed', { replace: true });
         }
       }, 700);
     } catch (err) {
@@ -122,16 +129,16 @@ export default function LoginPage() {
                 <div>
                   <p className="font-semibold text-ink">Currently signed in as:</p>
                   <p className="text-xs text-muted">
-                    {user.name} ({user.role === 'admin' ? 'Campus Admin' : 'Student'})
+                    {user.name} ({user.role === 'admin' ? 'Campus Admin' : user.role === 'staff' ? 'Maintenance Staff' : 'Student'})
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => navigate(user.role === 'admin' ? '/admin' : '/')}
+                    onClick={() => navigate(user.role === 'admin' ? '/admin' : user.role === 'staff' ? '/staff' : '/feed')}
                   >
-                    Go to {user.role === 'admin' ? 'Admin' : 'Feed'}
+                    Go to {user.role === 'admin' ? 'Admin' : user.role === 'staff' ? 'Staff Portal' : 'Feed'}
                   </Button>
                   <Button
                     size="sm"
@@ -163,7 +170,7 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
-              {/* Role Switcher: Student vs Admin */}
+              {/* Role Switcher: Student vs Staff vs Admin */}
               <div className="mb-6">
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
                   Sign in as
@@ -171,7 +178,7 @@ export default function LoginPage() {
                 <div
                   role="tablist"
                   aria-label="Select role to sign in as"
-                  className="grid grid-cols-2 gap-1 rounded-lg border border-line bg-surface-muted p-1"
+                  className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-surface-muted p-1"
                 >
                   <button
                     type="button"
@@ -179,14 +186,30 @@ export default function LoginPage() {
                     id="role-tab-student"
                     aria-selected={selectedRole === 'student'}
                     onClick={() => handleRoleChange('student')}
-                    className={`flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
                       selectedRole === 'student'
                         ? 'bg-surface text-brand-600 shadow-sm font-semibold'
                         : 'text-muted hover:text-ink'
                     }`}
                   >
-                    <GraduationCap size={18} aria-hidden="true" />
+                    <GraduationCap size={16} aria-hidden="true" />
                     <span>Student</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="tab"
+                    id="role-tab-staff"
+                    aria-selected={selectedRole === 'staff'}
+                    onClick={() => handleRoleChange('staff')}
+                    className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
+                      selectedRole === 'staff'
+                        ? 'bg-surface text-brand-600 shadow-sm font-semibold'
+                        : 'text-muted hover:text-ink'
+                    }`}
+                  >
+                    <HardHat size={16} aria-hidden="true" />
+                    <span>Staff</span>
                   </button>
 
                   <button
@@ -195,22 +218,33 @@ export default function LoginPage() {
                     id="role-tab-admin"
                     aria-selected={selectedRole === 'admin'}
                     onClick={() => handleRoleChange('admin')}
-                    className={`flex items-center justify-center gap-2 rounded-md py-2.5 text-sm font-medium transition-all ${
+                    className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
                       selectedRole === 'admin'
                         ? 'bg-surface text-brand-600 shadow-sm font-semibold'
                         : 'text-muted hover:text-ink'
                     }`}
                   >
-                    <Shield size={17} aria-hidden="true" />
-                    <span>Administrator</span>
+                    <Shield size={16} aria-hidden="true" />
+                    <span>Admin</span>
                   </button>
                 </div>
 
                 <p className="mt-1.5 text-xs text-muted">
                   {selectedRole === 'student'
                     ? 'Report broken campus facilities, vote, and track resolution timelines.'
+                    : selectedRole === 'staff'
+                    ? 'Review assigned maintenance tasks, update progress, and mark resolved.'
                     : 'Manage issue triage, assign resolution teams, and monitor SLAs.'}
                 </p>
+
+                <button
+                  type="button"
+                  onClick={handleQuickFill}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+                >
+                  <Zap size={14} className="text-brand-600" />
+                  <span>1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'})</span>
+                </button>
               </div>
 
               {/* Failed-Login State / Server Error Alert */}
@@ -244,18 +278,28 @@ export default function LoginPage() {
                   <Input
                     {...register('email')}
                     id="login-email"
-                    label={selectedRole === 'admin' ? 'Admin Email Address' : 'University Email Address'}
+                    label={
+                      selectedRole === 'admin'
+                        ? 'Admin Email Address'
+                        : selectedRole === 'staff'
+                        ? 'Staff Email Address'
+                        : 'University Email Address'
+                    }
                     type="email"
                     required
                     autoComplete="email"
                     placeholder={
                       selectedRole === 'admin'
                         ? 'admin@campusfix.edu'
+                        : selectedRole === 'staff'
+                        ? 'staff@campusfix.edu'
                         : 'student@university.edu'
                     }
                     helperText={
                       selectedRole === 'admin'
                         ? 'Use your university-issued administrative credentials'
+                        : selectedRole === 'staff'
+                        ? 'Assigned facilities/maintenance email'
                         : 'Official student email address'
                     }
                     error={errors.email?.message}
@@ -302,7 +346,14 @@ export default function LoginPage() {
                     ) : (
                       <>
                         <Lock size={16} aria-hidden="true" />
-                        <span>Sign In as {selectedRole === 'admin' ? 'Admin' : 'Student'}</span>
+                        <span>
+                          Sign In as{' '}
+                          {selectedRole === 'admin'
+                            ? 'Admin'
+                            : selectedRole === 'staff'
+                            ? 'Staff'
+                            : 'Student'}
+                        </span>
                       </>
                     )}
                   </Button>

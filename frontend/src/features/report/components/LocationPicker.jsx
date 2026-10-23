@@ -6,7 +6,6 @@ import { Building2, Compass, AlertCircle } from 'lucide-react';
 export const CAMPUSES = [
   { id: 'north', label: 'North Campus' },
   { id: 'south', label: 'South Campus' },
-  { id: 'hostel', label: 'Hostel Campus' },
 ];
 
 /**
@@ -45,11 +44,9 @@ export const BUILDINGS_BY_CAMPUS = {
     'Geology Museum',
     'COEP SBI Bank',
     'Student Section',
-  ],
-  hostel: [
-    'Boys Hostel Complex (Blocks C–J)',
-    'Girls Hostel Complex (GHB & Blocks A–B)',
-    'Hostel Mess & Dining Hall',
+    'MIS Office',
+    'Scholarship Section',
+    'Printing & Stationery',
     'COEP Gymkhana & Ground',
   ],
 };
@@ -102,7 +99,7 @@ export default function LocationPicker({
         <span className="mb-1.5 block text-xs font-medium text-ink">
           Campus
         </span>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-2 gap-3">
           {CAMPUSES.map((c) => {
             const isSelected = campus === c.id;
 
@@ -157,7 +154,7 @@ export default function LocationPicker({
         >
           <option value="">
             {campus
-              ? `-- Choose a ${campus === 'north' ? 'North' : campus === 'south' ? 'South' : 'Hostel'} Campus Building --`
+              ? `-- Choose a ${campus === 'north' ? 'North' : 'South'} Campus Building --`
               : '-- Please select a campus first --'}
           </option>
           {availableBuildings.map((bldg) => (

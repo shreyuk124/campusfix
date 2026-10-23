@@ -53,34 +53,66 @@ export default function Navbar() {
             <PlusCircle size={16} />
             <span>Report Issue</span>
           </NavLink>
+          <NavLink to="/staff" className={navLinkClass}>
+            <User size={16} />
+            <span>Staff</span>
+          </NavLink>
           <NavLink to="/admin" className={navLinkClass}>
             <Shield size={16} />
             <span>Authority Portal</span>
           </NavLink>
         </nav>
 
-        {/* User Profile (Signed In) */}
+        {/* User Profile or Login Action */}
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-bold text-xs shadow-xs border border-brand-200"
-            title={user?.email || 'Student'}
-          >
-            {user?.name
-              ? user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()
-              : 'AS'}
-          </div>
-          <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-semibold text-ink leading-tight">
-              {user?.name || 'Alex Sharma'}
-            </span>
-            <span className="text-[10px] font-medium text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200 self-start mt-0.5 capitalize">
-              {user?.role || 'Student'}
-            </span>
-          </div>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-bold text-xs shadow-xs border border-brand-200"
+                title={user?.email || 'User'}
+              >
+                {user?.name
+                  ? user.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase()
+                  : 'U'}
+              </div>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-semibold text-ink leading-tight">
+                  {user?.name || 'User'}
+                </span>
+                <span className="text-[10px] font-medium text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200 self-start mt-0.5 capitalize">
+                  {user?.role || 'Student'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => logout()}
+                title="Log out"
+                className="ml-1 inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:bg-surface-muted hover:text-ink transition-colors"
+              >
+                <LogOut size={13} />
+                <span className="hidden md:inline">Log out</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <NavLink
+                to="/login"
+                className="rounded-md border border-line-strong px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-surface-muted"
+              >
+                Log in
+              </NavLink>
+              <NavLink
+                to="/register"
+                className="rounded-md bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-brand-600"
+              >
+                Register
+              </NavLink>
+            </div>
+          )}
         </div>
       </div>
     </header>

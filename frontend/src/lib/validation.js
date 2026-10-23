@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  role: z.enum(['student', 'admin'], {
+  role: z.enum(['student', 'staff', 'admin'], {
     required_error: 'Please select a role to sign in as',
   }),
   email: z
@@ -16,6 +16,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z
   .object({
+    role: z.enum(['student', 'staff', 'admin']).default('student'),
     fullName: z
       .string()
       .min(1, 'Full name is required')

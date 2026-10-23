@@ -19,9 +19,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
-      return saved ? JSON.parse(saved) : DEFAULT_STUDENT_USER;
+      return saved ? JSON.parse(saved) : null;
     } catch {
-      return DEFAULT_STUDENT_USER;
+      return null;
     }
   });
 
@@ -99,9 +99,15 @@ export function AuthProvider({ children }) {
         throw error;
       }
 
+      const getRoleDisplayName = (r) => {
+        if (r === 'admin') return 'Campus Admin';
+        if (r === 'staff') return 'Maintenance Staff';
+        return email.split('@')[0].replace('.', ' ');
+      };
+
       const mockUser = {
-        id: role === 'admin' ? 'usr-admin-882' : 'usr-student-419',
-        name: role === 'admin' ? 'Campus Admin' : email.split('@')[0].replace('.', ' '),
+        id: role === 'admin' ? 'usr-admin-882' : role === 'staff' ? 'usr-staff-305' : 'usr-student-419',
+        name: getRoleDisplayName(role),
         email,
         role,
         isMock: true,
@@ -115,7 +121,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ fullName, email, password, studentId }) => {
+  const register = async ({ fullName, email, password, studentId, role = 'student' }) => {
     setIsLoading(true);
 
     // Artificial brief network delay for realistic loading state
@@ -137,14 +143,14 @@ export function AuthProvider({ children }) {
         email,
         password,
         studentId,
-        role: 'student',
+        role,
       });
       setIsBackendConnected(true);
       const newUser = data.user || {
-        id: data.id || 'usr-student-new',
+        id: data.id || `usr-${role}-new`,
         name: fullName,
         email,
-        role: 'student',
+        role: data.role || role,
       };
       setUser(newUser);
       localStorage.setItem(STORAGE_KEY_TOKEN, data.token || 'mock-jwt-token');
@@ -160,11 +166,11 @@ export function AuthProvider({ children }) {
       // Fallback for prototype before backend is connected
       setIsBackendConnected(false);
       const mockUser = {
-        id: 'usr-student-' + Math.floor(100 + Math.random() * 900),
+        id: `usr-${role}-` + Math.floor(100 + Math.random() * 900),
         name: fullName,
         email,
         studentId: studentId || 'N/A',
-        role: 'student',
+        role,
         isMock: true,
       };
 

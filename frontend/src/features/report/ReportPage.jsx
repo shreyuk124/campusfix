@@ -100,7 +100,7 @@ export default function ReportPage() {
     e.preventDefault();
     const newErrors = {};
 
-    if (!location.campus) newErrors.campus = 'Please select a campus (North, South, or Hostel).';
+    if (!location.campus) newErrors.campus = 'Please select a campus (North or South).';
     if (!location.building) newErrors.building = 'Please select a building.';
     if (!category) newErrors.category = 'Please select an issue category.';
     if (!specificLocation.trim()) newErrors.specificLocation = 'Please specify the exact room, lab, or floor.';

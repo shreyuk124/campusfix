@@ -121,6 +121,9 @@ class IssuesService {
         return (b.affectedCount || 0) - (a.affectedCount || 0);
       }
       if (sort === 'highest-priority') {
+        if (b.priorityScore !== undefined && a.priorityScore !== undefined) {
+          return (b.priorityScore || 0) - (a.priorityScore || 0);
+        }
         const order = { critical: 4, high: 3, medium: 2, low: 1 };
         const pA = order[String(a.priority || '').toLowerCase()] || 0;
         const pB = order[String(b.priority || '').toLowerCase()] || 0;
@@ -187,6 +190,10 @@ class IssuesService {
     issue.hasJoined = nowJoined;
     issue.affectedCount = Math.max(1, (issue.affectedCount || 1) + (nowJoined ? 1 : -1));
 
+    // Update score recalculation factor slightly
+    if (issue.priorityScore) {
+      issue.priorityScore = Math.min(99, Math.max(10, issue.priorityScore + (nowJoined ? 2 : -2)));
+    }
     issues[index] = issue;
     this.saveIssues(issues);
     return issue;

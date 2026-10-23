@@ -6,6 +6,7 @@ import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
 import { LoginPage, RegisterPage } from '../features/auth';
+import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -14,35 +15,67 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <FeedPage />,
+        element: (
+          <ProtectedRoute>
+            <Navigate to="/feed" replace />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'feed',
-        element: <FeedPage />,
+        element: (
+          <ProtectedRoute>
+            <FeedPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'my-issues',
-        element: <MyIssuesPage />,
+        element: (
+          <ProtectedRoute>
+            <MyIssuesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'issues',
-        element: <MyIssuesPage />,
+        element: (
+          <ProtectedRoute>
+            <MyIssuesPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'issues/:id',
-        element: <IssueDetailPage />,
+        element: (
+          <ProtectedRoute>
+            <IssueDetailPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'report',
-        element: <ReportPage />,
+        element: (
+          <ProtectedRoute>
+            <ReportPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'staff',
-        element: <StaffPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['staff', 'admin']}>
+            <StaffPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'admin',
-        element: <AdminPage />,
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'login',
@@ -54,7 +87,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '*',
-        element: <Navigate to="/" replace />,
+        element: <Navigate to="/feed" replace />,
       },
     ],
   },

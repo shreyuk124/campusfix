@@ -45,22 +45,26 @@ export default function Navbar() {
             <Compass size={16} />
             <span>Feed</span>
           </NavLink>
-          <NavLink to="/issues" className={navLinkClass}>
+          <NavLink to="/my-issues" className={navLinkClass}>
             <Inbox size={16} />
-            <span>Issues</span>
+            <span>My Issues</span>
           </NavLink>
           <NavLink to="/report" className={navLinkClass}>
             <PlusCircle size={16} />
             <span>Report Issue</span>
           </NavLink>
-          <NavLink to="/staff" className={navLinkClass}>
-            <User size={16} />
-            <span>Staff</span>
-          </NavLink>
-          <NavLink to="/admin" className={navLinkClass}>
-            <Shield size={16} />
-            <span>Admin</span>
-          </NavLink>
+          {user?.role === 'staff' && (
+            <NavLink to="/staff" className={navLinkClass}>
+              <User size={16} />
+              <span>Staff Portal</span>
+            </NavLink>
+          )}
+          {user?.role === 'admin' && (
+            <NavLink to="/admin" className={navLinkClass}>
+              <Shield size={16} />
+              <span>Authority Portal</span>
+            </NavLink>
+          )}
         </nav>
 
         {/* User Profile or Login Action */}

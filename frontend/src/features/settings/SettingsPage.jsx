@@ -114,8 +114,8 @@ export default function SettingsPage() {
                 onChange={(e) => setDefaultCampus(e.target.value)}
                 className="w-full h-11 rounded-md border border-line-strong bg-white px-3 text-sm text-ink outline-none transition-colors duration-150 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               >
-                <option value="College">College (Academic Block)</option>
-                <option value="Hostel">Hostel (Student Residence)</option>
+                <option value="North">North Campus (Academic Complex & Labs)</option>
+                <option value="South">South Campus (Main Building & Workshops)</option>
               </select>
               <p className="mt-1 text-xs text-muted">
                 Pre-selects your primary campus zone on the issue reporting form.

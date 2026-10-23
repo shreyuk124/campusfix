@@ -15,41 +15,39 @@ export const BUILDINGS_BY_CAMPUS = {
   north: [
     'Academic Complex',
     'Applied Mechanics Building',
-    'Bhau Building',
+    'Bhau Institute of Innovation',
     'Boat Club',
     'Cognizant Lab',
     'Data Centre',
-    'ENTC Building',
+    'Electronics & Telecommunication (E&TC) Building',
     'ENTC Extension',
     'Engineering Physics Lab',
-    'Instruments Building',
+    'Instrumentation & Control Building',
     'Mini Auditorium',
-    'New CSE Building',
-    'New Mechanical Building',
-    'Old CSE Building',
-    'Old Mechanical Building',
+    'Computer Engineering & IT Building',
+    'Mechanical Engineering Building',
   ],
   south: [
-    'Main Building',
+    'Main Heritage Building',
     'Main Auditorium',
-    'Electrical Building',
-    'New Civil Building',
-    'Old Civil Building',
-    'Metallurgy Building',
+    'Electrical Engineering Building',
+    'Civil Engineering Building',
+    'Metallurgy & Materials Science Building',
     'Meta Workshop',
-    'Meta Canteen',
-    'Manufacturing Building',
-    'Production Building',
-    'Planning Building',
+    'COEP Canteen / Meta Canteen',
+    'Manufacturing & Production Engineering Building',
+    'Planning Department Building',
+    'Central Library',
     'Natu Building',
     'Maths Department',
     'Language Lab',
     'Geology Museum',
     'COEP SBI Bank',
-    'MIS Office',
     'Student Section',
+    'MIS Office',
     'Scholarship Section',
     'Printing & Stationery',
+    'COEP Gymkhana & Ground',
   ],
 };
 
@@ -148,11 +146,11 @@ export default function LocationPicker({
           disabled={!campus}
           value={building}
           onChange={handleBuildingChange}
-          className={`block h-11 w-full rounded-md border bg-surface px-3 text-sm text-ink transition-colors duration-150 focus:outline-none focus:ring-2 ${
+          className={`block h-11 w-full rounded-md border bg-surface pl-3.5 pr-9 text-sm text-ink transition-colors duration-150 focus:outline-none focus:ring-2 ${
             errors.building
               ? 'border-danger focus:border-danger focus:ring-danger-50'
               : 'border-line-strong focus:border-brand-500 focus:ring-brand-100'
-          } disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted`}
+          } disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted cursor-pointer`}
         >
           <option value="">
             {campus

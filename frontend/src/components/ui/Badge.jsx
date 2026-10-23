@@ -75,10 +75,14 @@ export function PriorityBadge({ priority, score, className = '' }) {
     band = PRIORITY_BANDS.find((b) => score >= b.min && score <= b.max);
   }
   if (!band && priority) {
-    band = PRIORITY_BANDS.find((b) => b.label.toLowerCase() === String(priority).toLowerCase());
+    band = PRIORITY_BANDS.find(
+      (b) =>
+        b.label.toLowerCase() === String(priority).toLowerCase() ||
+        b.key.toLowerCase() === String(priority).toLowerCase()
+    );
   }
   if (!band) {
-    band = PRIORITY_BANDS[0]; // fallback to Low
+    band = PRIORITY_BANDS[1] || PRIORITY_BANDS[0];
   }
 
   const isCritical = band.key === 'critical';

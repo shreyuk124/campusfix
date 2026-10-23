@@ -95,17 +95,28 @@ export const CATEGORIES = [
   { key: 'Other', label: 'Other', icon: 'CircleHelp' },
 ];
 
+// COEP Technological University - Campus Buildings & Facilities
 export const CAMPUS_BUILDINGS = [
-  'Main Academic Building',
+  'Main Heritage Building',
+  'Academic Complex',
+  'Computer Engineering & IT Building',
+  'Mechanical Engineering Building',
+  'Electrical Engineering Building',
+  'Civil Engineering Building',
+  'Electronics & Telecommunication (E&TC) Building',
+  'Metallurgy & Materials Science Building',
+  'Instrumentation & Control Building',
+  'Manufacturing & Production Engineering Building',
+  'Applied Mechanics Building',
+  'Bhau Institute of Innovation',
+  'Central Library',
+  'Main Auditorium',
+  'Boat Club',
+  'COEP Gymkhana & Ground',
+  'COEP Canteen / Meta Canteen',
   'North Academic Block',
   'South Academic Block',
-  'Hostel Block A (Boys)',
-  'Hostel Block B (Boys)',
-  'Hostel Block C (Girls)',
-  'Central Library',
   'Student Activity Centre',
-  'Sports Complex & Gym',
-  'Mechanical Workshop',
   'Campus Dining Hall',
 ];
 

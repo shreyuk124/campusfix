@@ -240,7 +240,7 @@ export default function RegisterPage() {
                     type="text"
                     autoComplete="off"
                     placeholder="e.g. STU-2026-8819"
-                    helperText="Helps verify building access and hostel location"
+                    helperText="Helps verify student identity and department access"
                     error={errors.studentId?.message}
                     disabled={isSubmitting}
                   />

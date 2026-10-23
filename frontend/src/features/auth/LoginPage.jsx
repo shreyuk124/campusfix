@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
+  Zap,
   X,
 } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
@@ -235,6 +236,15 @@ export default function LoginPage() {
                     ? 'Review assigned maintenance tasks, update progress, and mark resolved.'
                     : 'Manage issue triage, assign resolution teams, and monitor SLAs.'}
                 </p>
+
+                <button
+                  type="button"
+                  onClick={handleQuickFill}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+                >
+                  <Zap size={14} className="text-brand-600" />
+                  <span>1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'})</span>
+                </button>
               </div>
 
               {/* Failed-Login State / Server Error Alert */}

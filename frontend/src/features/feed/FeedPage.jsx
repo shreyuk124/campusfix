@@ -132,7 +132,7 @@ export default function FeedPage() {
             Campus Issue Feed
           </h1>
           <p className="mt-1 text-sm sm:text-base text-muted max-w-2xl">
-            Browse campus maintenance reports, view live progress, and vote on issues that affect your daily classes or hostel living.
+            Browse campus maintenance reports, view live progress, and vote on issues that affect your daily classes or campus facilities.
           </p>
         </div>
 

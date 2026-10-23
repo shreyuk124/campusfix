@@ -1,11 +1,11 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { FeedPage } from '../features/feed';
-import { IssuesPage } from '../features/issues';
+import { MyIssuesPage, IssueDetailPage } from '../features/issues';
 import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
-import { LoginPage } from '../features/auth';
+import { LoginPage, RegisterPage } from '../features/auth';
 
 export const router = createBrowserRouter([
   {
@@ -17,8 +17,20 @@ export const router = createBrowserRouter([
         element: <FeedPage />,
       },
       {
+        path: 'feed',
+        element: <FeedPage />,
+      },
+      {
+        path: 'my-issues',
+        element: <MyIssuesPage />,
+      },
+      {
         path: 'issues',
-        element: <IssuesPage />,
+        element: <MyIssuesPage />,
+      },
+      {
+        path: 'issues/:id',
+        element: <IssueDetailPage />,
       },
       {
         path: 'report',
@@ -35,6 +47,14 @@ export const router = createBrowserRouter([
       {
         path: 'login',
         element: <LoginPage />,
+      },
+      {
+        path: 'register',
+        element: <RegisterPage />,
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },

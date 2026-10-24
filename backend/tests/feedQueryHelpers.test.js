@@ -2,6 +2,7 @@
  * backend/tests/feedQueryHelpers.test.js
  * 
  * Unit tests for Member 3 query validation and helper functions.
+ * Covers public feed parameters and Subtask 10 Authority Triage Query extensions.
  * Runs with Node.js built-in test runner: node --test
  */
 
@@ -14,6 +15,7 @@ import {
   formatPaginationMeta,
   validateIssueId,
   QueryValidationError,
+  ALLOWED_PRIORITY_BANDS,
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
   MAX_LIMIT,
@@ -88,6 +90,12 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
       assert.deepEqual(sortObj, { createdAt: -1 });
     });
 
+    test('handles oldest for FIFO authority triage queues', () => {
+      const { sortKey, sortObj } = parseSort('oldest');
+      assert.equal(sortKey, 'oldest');
+      assert.deepEqual(sortObj, { createdAt: 1 });
+    });
+
     test('handles priority sort correctly', () => {
       const { sortKey, sortObj } = parseSort('priority');
       assert.equal(sortKey, 'priority');
@@ -109,7 +117,7 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
     });
   });
 
-  describe('buildFilter()', () => {
+  describe('buildFilter() - Public & Authority Triage', () => {
     test('returns empty filter object for empty query', () => {
       const filter = buildFilter({});
       assert.deepEqual(filter, {});
@@ -125,7 +133,7 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
       );
     });
 
-    test('validates and normalizes allowed statuses', () => {
+    test('validates and normalizes single status', () => {
       assert.deepEqual(buildFilter({ status: 'Reported' }), { status: 'Reported' });
       assert.deepEqual(buildFilter({ status: 'in progress' }), { status: 'In Progress' });
       assert.deepEqual(buildFilter({ status: 'RESOLVED' }), { status: 'Resolved' });
@@ -133,6 +141,89 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
       assert.throws(
         () => buildFilter({ status: 'Deleted' }),
         (err) => err instanceof QueryValidationError && err.field === 'status'
+      );
+    });
+
+    test('supports multi-status comma-separated list for authority triage', () => {
+      const filter = buildFilter({ status: 'Reported, Assigned, In Progress' });
+      assert.deepEqual(filter.status, {
+        $in: ['Reported', 'Assigned', 'In Progress'],
+      });
+    });
+
+    test('supports multi-status array for authority triage', () => {
+      const filter = buildFilter({ status: ['Reported', 'Assigned'] });
+      assert.deepEqual(filter.status, {
+        $in: ['Reported', 'Assigned'],
+      });
+    });
+
+    test('throws when any status in comma-separated list is invalid', () => {
+      assert.throws(
+        () => buildFilter({ status: 'Reported,InvalidStatus' }),
+        (err) => err instanceof QueryValidationError && err.field === 'status'
+      );
+    });
+
+    test('validates and normalizes single priorityBand', () => {
+      assert.deepEqual(buildFilter({ priorityBand: 'Critical' }), { priorityBand: 'Critical' });
+      assert.deepEqual(buildFilter({ priorityBand: 'high' }), { priorityBand: 'High' });
+      assert.deepEqual(buildFilter({ priorityBand: 'LOW' }), { priorityBand: 'Low' });
+
+      assert.throws(
+        () => buildFilter({ priorityBand: 'Urgent' }),
+        (err) => err instanceof QueryValidationError && err.field === 'priorityBand'
+      );
+    });
+
+    test('supports multi-priorityBand comma-separated list for authority triage', () => {
+      const filter = buildFilter({ priorityBand: 'High,Critical' });
+      assert.deepEqual(filter.priorityBand, {
+        $in: ['High', 'Critical'],
+      });
+    });
+
+    test('supports search query with regex escaping', () => {
+      const filter = buildFilter({ search: 'washroom [leak]' });
+      assert.ok(filter.$or);
+      assert.equal(filter.$or.length, 3);
+      assert.deepEqual(filter.$or[0], { title: { $regex: 'washroom \\[leak\\]', $options: 'i' } });
+      assert.deepEqual(filter.$or[1], { locationText: { $regex: 'washroom \\[leak\\]', $options: 'i' } });
+      assert.deepEqual(filter.$or[2], { refId: { $regex: 'washroom \\[leak\\]', $options: 'i' } });
+    });
+
+    test('supports q alias for search query', () => {
+      const filter = buildFilter({ q: 'broken chair' });
+      assert.ok(filter.$or);
+      assert.deepEqual(filter.$or[0], { title: { $regex: 'broken chair', $options: 'i' } });
+    });
+
+    test('throws when search query exceeds 100 characters', () => {
+      const longQuery = 'a'.repeat(101);
+      assert.throws(
+        () => buildFilter({ search: longQuery }),
+        (err) => err instanceof QueryValidationError && err.field === 'search'
+      );
+    });
+
+    test('supports date range filters (fromDate and toDate)', () => {
+      const from = '2026-10-01T00:00:00.000Z';
+      const to = '2026-10-24T23:59:59.999Z';
+      const filter = buildFilter({ fromDate: from, toDate: to });
+
+      assert.ok(filter.createdAt);
+      assert.deepEqual(filter.createdAt.$gte, new Date(from));
+      assert.deepEqual(filter.createdAt.$lte, new Date(to));
+    });
+
+    test('throws on invalid date in date range filters', () => {
+      assert.throws(
+        () => buildFilter({ fromDate: 'not-a-date' }),
+        (err) => err instanceof QueryValidationError && err.field === 'fromDate'
+      );
+      assert.throws(
+        () => buildFilter({ toDate: 'invalid' }),
+        (err) => err instanceof QueryValidationError && err.field === 'toDate'
       );
     });
 
@@ -150,6 +241,22 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
         building: '6715b9f9e20a841234567890',
         category: '6715b9f9e20a841234567891',
       });
+    });
+
+    test('builds comprehensive authority triage combined filter', () => {
+      const filter = buildFilter({
+        campus: 'north',
+        status: 'Reported,In Progress',
+        priorityBand: 'High,Critical',
+        building: '6715b9f9e20a841234567890',
+        search: 'power',
+      });
+
+      assert.equal(filter.campus, 'north');
+      assert.deepEqual(filter.status, { $in: ['Reported', 'In Progress'] });
+      assert.deepEqual(filter.priorityBand, { $in: ['High', 'Critical'] });
+      assert.equal(filter.building, '6715b9f9e20a841234567890');
+      assert.ok(filter.$or);
     });
 
     test('ignores arbitrary unwhitelisted query keys', () => {

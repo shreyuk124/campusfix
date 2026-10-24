@@ -276,7 +276,8 @@ describe('Member 3: feedController Unit Tests', () => {
       assert.equal(res.body.data[0].title, 'My ticket 1');
     });
   });
-describe('Subtask 7: Real Mongoose Model Integration', () => {
+
+  describe('Subtask 7: Real Mongoose Model Integration', () => {
     test('Mongoose Issue schema paths align with feed query filters and populate paths', () => {
       const paths = Object.keys(Issue.schema.paths);
       assert.ok(paths.includes('refId'));
@@ -311,6 +312,62 @@ describe('Subtask 7: Real Mongoose Model Integration', () => {
       assert.equal(sanitized.title, 'Broken desk in LH-101');
       assert.equal(sanitized.campus, 'north');
       assert.equal(sanitized.__v, undefined);
+    });
+  });
+
+  describe('Subtask 10: Authority Triage Queries', () => {
+    test('handles authority triage multi-status and priorityBand query filters', async () => {
+      const mockIssues = [
+        {
+          _id: '507f1f77bcf86cd799439011',
+          refId: 'CF-2026-0001',
+          title: 'Power outage in Library',
+          status: 'Reported',
+          priorityBand: 'Critical',
+          createdBy: { role: 'student' },
+        },
+      ];
+
+      const mockModel = {
+        find(filter) {
+          assert.deepEqual(filter.status, { $in: ['Reported', 'In Progress'] });
+          assert.deepEqual(filter.priorityBand, { $in: ['High', 'Critical'] });
+          return createMockQuery(mockIssues);
+        },
+        countDocuments() {
+          return Promise.resolve(1);
+        },
+      };
+
+      const controller = createFeedController({ issueModel: mockModel });
+      const { req, res } = createMockHttp({
+        query: {
+          status: 'Reported,In Progress',
+          priorityBand: 'High,Critical',
+          sort: 'priority',
+        },
+      });
+
+      await controller.getFeed(req, res);
+
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.success, true);
+      assert.equal(res.body.data.length, 1);
+    });
+
+    test('returns 400 when authority triage priorityBand is invalid', async () => {
+      const mockModel = { find() {}, countDocuments() {} };
+      const controller = createFeedController({ issueModel: mockModel });
+      const { req, res } = createMockHttp({
+        query: { priorityBand: 'SuperUrgent' },
+      });
+
+      await controller.getFeed(req, res);
+
+      assert.equal(res.statusCode, 400);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, 'BAD_REQUEST');
+      assert.equal(res.body.error.field, 'priorityBand');
     });
   });
 });

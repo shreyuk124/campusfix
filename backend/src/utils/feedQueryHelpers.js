@@ -1,7 +1,8 @@
 /**
  * backend/src/utils/feedQueryHelpers.js
  * 
- * Pure query-parameter validation and normalization helpers for Public Feed & Browsing.
+ * Pure query-parameter validation and normalization helpers for Public Feed,
+ * Student Browsing, and Authority Triage Engine.
  * Independent of Mongoose models and MongoDB connections.
  * 
  * Conforms to Member 3 API specifications:
@@ -21,7 +22,14 @@ export const ALLOWED_STATUSES = Object.freeze([
   'Reopened',
 ]);
 
-export const ALLOWED_SORTS = Object.freeze(['newest', 'priority', 'overdue']);
+export const ALLOWED_PRIORITY_BANDS = Object.freeze([
+  'Low',
+  'Medium',
+  'High',
+  'Critical',
+]);
+
+export const ALLOWED_SORTS = Object.freeze(['newest', 'oldest', 'priority', 'overdue']);
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
@@ -73,7 +81,8 @@ export function parsePagination(query = {}) {
 
 /**
  * Maps public sort key to MongoDB sort specification
- * @param {string} [sortParam] - e.g. 'newest', 'priority', 'overdue'
+ * Supports 'newest', 'oldest' (FIFO queue), 'priority', 'overdue'
+ * @param {string} [sortParam] - e.g. 'newest', 'oldest', 'priority', 'overdue'
  * @returns {{ sortObj: Object, sortKey: string, pendingSchemaNote?: string }}
  */
 export function parseSort(sortParam) {
@@ -94,6 +103,12 @@ export function parseSort(sortParam) {
   }
 
   switch (normalized) {
+    case 'oldest':
+      return {
+        sortKey: 'oldest',
+        sortObj: { createdAt: 1 },
+      };
+
     case 'priority':
       return {
         sortKey: 'priority',
@@ -120,8 +135,8 @@ export function parseSort(sortParam) {
 }
 
 /**
- * Validates and builds schema-safe filter criteria
- * Ignores arbitrary/unwhitelisted keys to prevent NoSQL operator injection
+ * Validates and builds schema-safe filter criteria for both student feed and authority triage.
+ * Ignores arbitrary/unwhitelisted keys to prevent NoSQL operator injection.
  * @param {Object} query - Express req.query object
  * @returns {Object} Clean MongoDB filter object
  */
@@ -129,7 +144,7 @@ export function buildFilter(query = {}) {
   const filter = {};
 
   // 1. Campus filter (strictly 'north' | 'south')
-  if (query.campus !== undefined && query.campus !== '') {
+  if (query.campus !== undefined && query.campus !== null && query.campus !== '') {
     const campusStr = String(query.campus).trim().toLowerCase();
     if (!ALLOWED_CAMPUSES.includes(campusStr)) {
       throw new QueryValidationError(
@@ -140,32 +155,111 @@ export function buildFilter(query = {}) {
     filter.campus = campusStr;
   }
 
-  // 2. Status filter
-  if (query.status !== undefined && query.status !== '') {
-    const statusStr = String(query.status).trim();
-    // Case-insensitive match against allowed statuses
-    const matchedStatus = ALLOWED_STATUSES.find(
-      (s) => s.toLowerCase() === statusStr.toLowerCase()
-    );
-    if (!matchedStatus) {
-      throw new QueryValidationError(
-        `Invalid status: "${query.status}". Allowed values: ${ALLOWED_STATUSES.join(', ')}`,
-        'status'
-      );
+  // 2. Status filter (supports single value or comma-separated / array for authority triage)
+  if (query.status !== undefined && query.status !== null && query.status !== '') {
+    const rawStatuses = Array.isArray(query.status)
+      ? query.status
+      : String(query.status).split(',');
+
+    const validatedStatuses = rawStatuses
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+      .map((statusStr) => {
+        const matched = ALLOWED_STATUSES.find(
+          (s) => s.toLowerCase() === statusStr.toLowerCase()
+        );
+        if (!matched) {
+          throw new QueryValidationError(
+            `Invalid status: "${statusStr}". Allowed values: ${ALLOWED_STATUSES.join(', ')}`,
+            'status'
+          );
+        }
+        return matched;
+      });
+
+    if (validatedStatuses.length === 1) {
+      filter.status = validatedStatuses[0];
+    } else if (validatedStatuses.length > 1) {
+      filter.status = { $in: validatedStatuses };
     }
-    filter.status = matchedStatus;
   }
 
-  // 3. Building filter (string / ID)
-  if (query.building !== undefined && query.building !== '') {
+  // 3. Priority band filter (supports single value or comma-separated / array for authority triage)
+  if (query.priorityBand !== undefined && query.priorityBand !== null && query.priorityBand !== '') {
+    const rawBands = Array.isArray(query.priorityBand)
+      ? query.priorityBand
+      : String(query.priorityBand).split(',');
+
+    const validatedBands = rawBands
+      .map((b) => String(b).trim())
+      .filter(Boolean)
+      .map((bandStr) => {
+        const matched = ALLOWED_PRIORITY_BANDS.find(
+          (b) => b.toLowerCase() === bandStr.toLowerCase()
+        );
+        if (!matched) {
+          throw new QueryValidationError(
+            `Invalid priorityBand: "${bandStr}". Allowed values: ${ALLOWED_PRIORITY_BANDS.join(', ')}`,
+            'priorityBand'
+          );
+        }
+        return matched;
+      });
+
+    if (validatedBands.length === 1) {
+      filter.priorityBand = validatedBands[0];
+    } else if (validatedBands.length > 1) {
+      filter.priorityBand = { $in: validatedBands };
+    }
+  }
+
+  // 4. Keyword search (title, locationText, refId)
+  const searchQuery = query.search || query.q;
+  if (searchQuery !== undefined && searchQuery !== null && searchQuery !== '') {
+    const term = String(searchQuery).trim();
+    if (term.length > 0) {
+      if (term.length > 100) {
+        throw new QueryValidationError('Search query must not exceed 100 characters', 'search');
+      }
+      const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.$or = [
+        { title: { $regex: escapedTerm, $options: 'i' } },
+        { locationText: { $regex: escapedTerm, $options: 'i' } },
+        { refId: { $regex: escapedTerm, $options: 'i' } },
+      ];
+    }
+  }
+
+  // 5. Date range filter (for authority triage / analytics windows)
+  if (query.fromDate || query.toDate) {
+    const dateFilter = {};
+    if (query.fromDate) {
+      const from = new Date(query.fromDate);
+      if (isNaN(from.getTime())) {
+        throw new QueryValidationError('Invalid fromDate parameter. Must be a valid ISO date', 'fromDate');
+      }
+      dateFilter.$gte = from;
+    }
+    if (query.toDate) {
+      const to = new Date(query.toDate);
+      if (isNaN(to.getTime())) {
+        throw new QueryValidationError('Invalid toDate parameter. Must be a valid ISO date', 'toDate');
+      }
+      dateFilter.$lte = to;
+    }
+    filter.createdAt = dateFilter;
+  }
+
+  // 6. Building filter (string / ID)
+  if (query.building !== undefined && query.building !== null && query.building !== '') {
     const buildingStr = String(query.building).trim();
     if (buildingStr) {
       filter.building = buildingStr;
     }
   }
 
-  // 4. Category filter (string / ID)
-  if (query.category !== undefined && query.category !== '') {
+  // 7. Category filter (string / ID)
+  if (query.category !== undefined && query.category !== null && query.category !== '') {
     const categoryStr = String(query.category).trim();
     if (categoryStr) {
       filter.category = categoryStr;

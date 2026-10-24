@@ -1,5 +1,5 @@
 // features/issues/components/IssueCard.jsx - Shared core IssueCard component
-// Conforms to DESIGN.md §4.5 and reusable across Student Feed, My Issues, Staff and Admin dashboards
+// Minimalistic, clean, modern design without SLA score clutter or emojis
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -13,12 +13,10 @@ import {
   Users,
   Clock,
   User,
-  Heart,
-  ChevronRight,
-  ShieldCheck,
   Check,
+  ChevronRight,
 } from 'lucide-react';
-import { StatusBadge, PriorityBadge, SlaBadge, HotspotBadge } from '../../../components/ui/Badge';
+import { StatusBadge, HotspotBadge } from '../../../components/ui/Badge';
 import { formatRelativeTime } from '../../../lib/format';
 
 /**
@@ -36,27 +34,7 @@ export function getCategoryIcon(category, size = 18, className = '') {
 }
 
 /**
- * Priority Border Color resolver for left 4px bar
- */
-function getPriorityBorderColor(priority) {
-  const p = String(priority || '').toLowerCase();
-  if (p === 'critical') return 'border-l-[#D92D20]';
-  if (p === 'high') return 'border-l-[#ED7D1E]';
-  if (p === 'medium') return 'border-l-[#E0B000]';
-  return 'border-l-[#22A559]'; // low
-}
-
-/**
  * IssueCard Component
- *
- * @param {Object} props
- * @param {Object} props.issue - The issue object
- * @param {string} props.variant - 'default' | 'admin' | 'staff'
- * @param {boolean} props.isSelected - Selection state for admin multi-select
- * @param {Function} props.onSelect - Callback when admin selects this card
- * @param {Function} props.onToggleJoin - Quick "+1 I'm affected" button action
- * @param {Function} props.onQuickAction - Quick actions handler (assign, status)
- * @param {boolean} props.showJoinButton - Whether to show quick join button
  */
 export function IssueCard({
   issue,
@@ -78,9 +56,6 @@ export function IssueCard({
     location,
     category,
     status = 'Reported',
-    priority = 'Medium',
-    priorityScore,
-    slaDeadline,
     createdAt,
     updatedAt,
     affectedCount = 1,
@@ -90,13 +65,12 @@ export function IssueCard({
     assignedTeam = 'Unassigned',
   } = issue;
 
-  const priorityBorderClass = getPriorityBorderColor(priority);
   const detailUrl = `/issues/${id || referenceId}`;
 
   const handleJoinClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (onToggleJoin) {
+    if (onToggleJoin && !isReporter) {
       onToggleJoin(issue);
     }
   };
@@ -110,7 +84,7 @@ export function IssueCard({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-4 sm:p-5 shadow-card transition-all duration-150 hover:shadow-hover hover:border-line-strong border-l-4 ${priorityBorderClass} ${
+      className={`group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-4 sm:p-5 shadow-card transition-all duration-150 hover:shadow-hover hover:border-brand-200 ${
         isSelected ? 'ring-2 ring-brand-500 bg-brand-50/20' : ''
       } ${className}`}
     >
@@ -164,21 +138,19 @@ export function IssueCard({
           </div>
         </div>
 
-        {/* Badges Row */}
+        {/* Clean Badges Row (Zero SLA/Score clutter) */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
           <StatusBadge status={status} />
-          <PriorityBadge priority={priority} score={priorityScore} />
-          {slaDeadline && <SlaBadge deadline={slaDeadline} created={createdAt} />}
           {isHotspot && <HotspotBadge />}
-          {isReporter && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 px-2 py-0.5 text-xs font-medium text-brand-700">
+          {variant !== 'admin' && isReporter && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
               Reported by you
             </span>
           )}
-          {hasJoined && !isReporter && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-medium text-orange-700">
-              <Heart size={11} className="fill-orange-600 text-orange-600" />
-              You joined
+          {variant !== 'admin' && hasJoined && !isReporter && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+              <Check size={11} className="text-teal-700 stroke-[2.5]" />
+              You marked affected
             </span>
           )}
         </div>
@@ -187,47 +159,52 @@ export function IssueCard({
       {/* Divider */}
       <hr className="my-3.5 border-line" />
 
-      {/* Footer: Affected count, Updated relative time, Owner team */}
+      {/* Footer: Affected count, Mark Affected action, Updated time */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        {/* Left: Affected Count with quick toggle */}
+        {/* Left: Affected Count pill + distinct Action Button on the side */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleJoinClick}
-            disabled={!showJoinButton}
-            title={hasJoined ? "You marked that you're affected by this" : "Click if this problem affects you too"}
-            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-medium transition-colors ${
-              hasJoined
-                ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                : 'bg-surface-muted text-muted hover:text-orange-700 hover:bg-orange-50/70 border border-line'
-            } ${showJoinButton ? 'cursor-pointer' : 'cursor-default'}`}
-          >
-            <Users
-              size={13}
-              className={hasJoined ? 'text-orange-600' : 'text-muted group-hover:text-orange-600'}
-            />
-            <span>
-              {affectedCount} {affectedCount === 1 ? 'affected' : 'affected'}
+          <span className="inline-flex items-center gap-1.5 text-xs text-body font-medium px-2.5 py-1 rounded-md bg-surface-muted border border-line">
+            <Users size={13} className="text-muted shrink-0" />
+            <span>{affectedCount} affected</span>
+          </span>
+
+          {variant !== 'admin' && showJoinButton && !isReporter && status !== 'Resolved' && status !== 'Closed' && (
+            <button
+              type="button"
+              onClick={handleJoinClick}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
+                hasJoined
+                  ? 'bg-teal-50 text-teal-800 border border-teal-300 hover:bg-teal-100 cursor-pointer shadow-xs'
+                  : 'bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 hover:border-brand-300 cursor-pointer shadow-xs'
+              }`}
+              title={hasJoined ? 'Click to unmark' : 'Click to mark that this issue affects you too'}
+            >
+              {hasJoined ? (
+                <>
+                  <Check size={13} className="text-teal-700 stroke-[2.5]" />
+                  <span>You marked affected</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-brand-600">+1</span>
+                  <span>Mark affected</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {variant !== 'admin' && isReporter && (
+            <span className="inline-flex items-center text-[11px] font-medium text-brand-700 bg-brand-50 px-2 py-0.5 rounded border border-brand-200">
+              Your report
             </span>
-            {showJoinButton && !hasJoined && (
-              <span className="text-[10px] text-brand-600 font-semibold ml-0.5">+1</span>
-            )}
-          </button>
+          )}
         </div>
 
-        {/* Center/Right: Relative time and Owner Team */}
+        {/* Right: Relative time and View detail arrow */}
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1" title={createdAt}>
             <Clock size={12} className="text-muted" />
             <span>Updated {formatRelativeTime(updatedAt || createdAt)}</span>
-          </span>
-
-          <span
-            className="hidden sm:inline-flex items-center gap-1 font-medium text-ink/80 truncate max-w-[130px]"
-            title={`Assigned team: ${assignedTeam}`}
-          >
-            <User size={12} className="text-muted shrink-0" />
-            <span className="truncate">{assignedTeam}</span>
           </span>
 
           <Link
@@ -243,31 +220,41 @@ export function IssueCard({
       {/* Admin Quick Actions Strip (when variant='admin') */}
       {variant === 'admin' && onQuickAction && (
         <div className="mt-3 pt-2.5 border-t border-line/60 flex items-center justify-between text-xs">
-          <span className="text-muted">
-            Assigned: <strong className="text-ink">{assignedTeam}</strong>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickAction('assign', issue);
-              }}
-              className="px-2 py-0.5 rounded bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium"
-            >
-              Assign
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickAction('priority', issue);
-              }}
-              className="px-2 py-0.5 rounded bg-surface-muted border border-line text-ink hover:bg-brand-50 font-medium"
-            >
-              Priority
-            </button>
-          </div>
+          {status === 'Resolved' || status === 'Closed' ? (
+            <span className="text-muted">
+              Handled by: <strong className="text-ink">{assignedTeam !== 'Unassigned' ? assignedTeam : 'Campus Maintenance'}</strong>
+            </span>
+          ) : !assignedTeam || assignedTeam === 'Unassigned' || status === 'Reported' ? (
+            <span className="inline-flex items-center gap-1.5 text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              Awaiting Assignment
+            </span>
+          ) : (
+            <span className="text-muted">
+              Assigned: <strong className="text-ink">{assignedTeam}</strong>
+            </span>
+          )}
+
+          {status !== 'Resolved' && status !== 'Closed' && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickAction('assign', issue);
+                }}
+                className={`px-2.5 py-1 rounded font-medium transition-colors ${
+                  !assignedTeam || assignedTeam === 'Unassigned' || status === 'Reported'
+                    ? 'bg-brand-500 text-white hover:bg-brand-600 font-semibold shadow-xs'
+                    : 'bg-surface-muted text-body hover:bg-brand-50 hover:text-brand-700 border border-line'
+                }`}
+              >
+                {!assignedTeam || assignedTeam === 'Unassigned' || status === 'Reported'
+                  ? 'Assign Team'
+                  : 'Reassign'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

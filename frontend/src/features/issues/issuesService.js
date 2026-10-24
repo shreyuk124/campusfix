@@ -51,7 +51,7 @@ class IssuesService {
     status = 'all',
     priority = 'all',
     sort = 'newest',
-    tab = 'all', // 'all', 'my-active', 'my-awaiting', 'my-closed'
+    tab = 'all', // 'all', 'my-active', 'my-resolved', 'my-closed'
     simulateDelay = 250,
     forceError = false,
   } = {}) {
@@ -70,13 +70,9 @@ class IssuesService {
       items = items.filter(
         (item) => (item.isReporter || item.hasJoined) && ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(item.status)
       );
-    } else if (tab === 'my-awaiting') {
+    } else if (tab === 'my-resolved' || tab === 'my-closed' || tab === 'my-awaiting') {
       items = items.filter(
-        (item) => item.status === 'Resolved' && (item.isReporter || item.hasJoined)
-      );
-    } else if (tab === 'my-closed') {
-      items = items.filter(
-        (item) => (item.isReporter || item.hasJoined) && ['Closed', 'Rejected', 'Merged'].includes(item.status)
+        (item) => (item.isReporter || item.hasJoined) && ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
       );
     }
 
@@ -219,7 +215,7 @@ class IssuesService {
       type: 'status_change',
       fromStatus: 'Resolved',
       toStatus: 'Closed',
-      actor: { name: 'A student', role: 'student' }, // Reporter identity masked per privacy rules
+      actor: { name: 'A student', role: 'student' },
       note: note || 'Student verified the resolution.',
       timestamp: new Date().toISOString(),
     };

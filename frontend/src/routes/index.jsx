@@ -8,7 +8,6 @@ import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
 import { SettingsPage } from '../features/settings';
-import { LoginPage, RegisterPage } from '../features/auth';
 import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -20,10 +19,6 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       {
-        path: 'dashboard',
-        element: <DashboardPage />,
-      },
-      {
         path: 'feed',
         element: (
           <ProtectedRoute>
@@ -34,7 +29,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-issues',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <MyIssuesPage />
           </ProtectedRoute>
         ),
@@ -42,7 +37,7 @@ export const router = createBrowserRouter([
       {
         path: 'issues',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <MyIssuesPage />
           </ProtectedRoute>
         ),
@@ -58,8 +53,16 @@ export const router = createBrowserRouter([
       {
         path: 'report',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <ReportPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DashboardPage />
           </ProtectedRoute>
         ),
       },
@@ -89,15 +92,15 @@ export const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: <LoginPage />,
+        element: <Navigate to="/" replace />,
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: <Navigate to="/" replace />,
       },
       {
         path: '*',
-        element: <Navigate to="/feed" replace />,
+        element: <Navigate to="/" replace />,
       },
     ],
   },

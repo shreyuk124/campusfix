@@ -1,4 +1,4 @@
-﻿import mongoose from 'mongoose';
+import mongoose from 'mongoose';
 
 const issueSchema = new mongoose.Schema(
   {
@@ -40,9 +40,10 @@ const issueSchema = new mongoose.Schema(
     photos: {
       type: [String],
       validate: [
-        (val) => val.length >= 1 && val.length <= 3,
-        'Between 1 and 3 photos are required for evidence',
+        (val) => !val || val.length <= 3,
+        'A maximum of 3 photos can be attached as evidence',
       ],
+      default: [],
     },
     status: {
       type: String,

@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { Camera, UploadCloud, X, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Camera, X, AlertCircle } from 'lucide-react';
 
 /**
  * System Constraints
  */
-export const MIN_PHOTOS = 1;
+export const MIN_PHOTOS = 0;
 export const MAX_PHOTOS = 3;
 export const MAX_FILE_SIZE_MB = 5;
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024; // 5MB in bytes
@@ -140,21 +140,21 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
 
   return (
     <div className="w-full space-y-3">
-      {/* Header with mandatory indicator and counter badge */}
+      {/* Header with optional indicator and counter badge */}
       <div className="flex items-center justify-between">
         <div>
           <label className="block text-sm font-semibold text-ink">
-            Photo Evidence <span className="text-danger">* (Required)</span>
+            Photo Evidence <span className="text-muted font-normal">(Optional)</span>
           </label>
           <p className="text-xs text-muted">
-            Attach at least 1 clear photo (max {MAX_PHOTOS}). JPG, PNG, WebP up to {MAX_FILE_SIZE_MB}MB each.
+            Attach up to {MAX_PHOTOS} photos if you have them. JPG, PNG, WebP up to {MAX_FILE_SIZE_MB}MB each.
           </p>
         </div>
 
         {/* Counter Badge */}
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-            photos.length >= MIN_PHOTOS
+            photos.length > 0
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
               : 'bg-canvas text-muted border border-line'
           }`}
@@ -197,7 +197,7 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
             or drag and drop
           </p>
           <p className="mt-1 text-xs text-muted">
-            Min {MIN_PHOTOS} photo required • Max {MAX_FILE_SIZE_MB}MB each
+            Optional • Up to {MAX_PHOTOS} photos • Max {MAX_FILE_SIZE_MB}MB each
           </p>
         </div>
       )}

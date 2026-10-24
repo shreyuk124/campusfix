@@ -1,13 +1,11 @@
 // features/feed/FeedPage.jsx - Campus Public Issue Feed conforming to DESIGN.md §478-480
+// Minimalistic design without SLA or internal priority scoring
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  Flame,
-  PlusCircle,
-  TrendingUp,
   Clock,
   CheckCircle2,
-  AlertTriangle,
+  Users,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -26,7 +24,6 @@ export default function FeedPage() {
     building: searchParams.get('building') || 'all',
     category: searchParams.get('category') || 'all',
     status: searchParams.get('status') || 'all',
-    priority: searchParams.get('priority') || 'all',
     sort: searchParams.get('sort') || 'newest',
   });
 
@@ -43,7 +40,6 @@ export default function FeedPage() {
     if (newFilters.building !== 'all') params.set('building', newFilters.building);
     if (newFilters.category !== 'all') params.set('category', newFilters.category);
     if (newFilters.status !== 'all') params.set('status', newFilters.status);
-    if (newFilters.priority !== 'all') params.set('priority', newFilters.priority);
     if (newFilters.sort !== 'newest') params.set('sort', newFilters.sort);
     if (newPage > 1) params.set('page', String(newPage));
     setSearchParams(params, { replace: true });
@@ -98,13 +94,13 @@ export default function FeedPage() {
         addToast({
           type: 'success',
           title: 'Marked as affected',
-          message: `Added your vote to ${issue.referenceId}. Authorities will see increased student priority.`,
+          message: `Added your response to ${issue.referenceId}. Authorities will see increased student priority.`,
         });
       } else {
         addToast({
           type: 'info',
           title: 'Vote removed',
-          message: `Removed your vote from ${issue.referenceId}.`,
+          message: `Removed your response from ${issue.referenceId}.`,
         });
       }
     } catch {
@@ -132,7 +128,7 @@ export default function FeedPage() {
             Campus Issue Feed
           </h1>
           <p className="mt-1 text-sm sm:text-base text-muted max-w-2xl">
-            Browse campus maintenance reports, view live progress, and vote on issues that affect your daily classes or campus facilities.
+            Browse campus maintenance reports, view live progress, and flag issues that affect your daily classes or campus facilities.
           </p>
         </div>
 
@@ -142,9 +138,9 @@ export default function FeedPage() {
             <span className="text-xs text-muted font-medium">Total Tracked</span>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-bold text-ink">
-                {data.total || 8}
+                {data.total || 24}
               </span>
-              <span className="text-xs text-brand-600 font-medium">reports</span>
+              <span className="text-xs text-muted font-medium">reports</span>
             </div>
           </div>
 
@@ -164,17 +160,17 @@ export default function FeedPage() {
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-orange-50/60 border border-orange-200/60">
-            <span className="text-xs text-orange-800 font-medium">Critical Hazards</span>
+          <div className="p-3 rounded-xl bg-brand-50/60 border border-brand-200/60">
+            <span className="text-xs text-brand-800 font-medium">Students Affected</span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-bold text-danger">2</span>
-              <AlertTriangle size={16} className="text-danger" />
+              <span className="text-xl sm:text-2xl font-bold text-brand-600">42</span>
+              <Users size={16} className="text-brand-600" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* FilterBar (Search, Building, Category, Status, Priority, Sort) */}
+      {/* FilterBar (Search, Building, Category, Status, Sort) */}
       <FilterBar
         filters={filters}
         onFilterChange={handleFilterChange}
@@ -253,9 +249,9 @@ export default function FeedPage() {
                     key={p}
                     type="button"
                     onClick={() => handlePageChange(p)}
-                    className={`h-9 w-9 rounded-lg text-xs font-semibold transition-colors ${
-                      p === page
-                        ? 'bg-brand-500 text-white shadow-xs'
+                    className={`h-9 w-9 rounded-lg text-xs font-medium transition-colors ${
+                      page === p
+                        ? 'bg-brand-500 font-bold text-white shadow-xs'
                         : 'border border-line-strong bg-surface text-ink hover:bg-brand-50'
                     }`}
                   >

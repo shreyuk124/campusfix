@@ -1,65 +1,63 @@
 // features/issues/IssueDetailPage.jsx - Comprehensive Issue Detail and Tracking page
-// Conforms to DESIGN.md §457-477, §4.6, §4.7 & Privacy Rule §9
+// Role-aware: Admins/Staff get Authority Controls; Students get student impact & voting
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Copy,
   Check,
   MapPin,
-  Clock,
   Users,
-  ShieldCheck,
-  RotateCcw,
   CheckCircle2,
-  Share2,
-  Calendar,
   AlertTriangle,
   UserCheck,
-  Building,
-  Heart,
   Wrench,
+  Shield,
+  Play,
+  RotateCcw,
 } from 'lucide-react';
 import {
   StatusBadge,
-  PriorityBadge,
-  SlaBadge,
   HotspotBadge,
   IssueDetailSkeleton,
   ErrorState,
-  Modal,
   Button,
+  Modal,
   useToast,
 } from '../../components/ui';
 import {
   StatusStepper,
   Timeline,
   PhotoGallery,
-  PriorityExplainer,
   getCategoryIcon,
 } from './components';
+import { useAuth } from '../auth/useAuth';
 import issuesService from './issuesService';
-import { formatAbsoluteDate, formatRelativeTime, formatAffectedCount } from '../../lib/format';
+import { formatAbsoluteDate, formatRelativeTime } from '../../lib/format';
 
 export default function IssueDetailPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { addToast } = useToast();
+
+  const isAdmin = user?.role === 'admin';
+  const isStaff = user?.role === 'staff';
+  const isStudent = !isAdmin && !isStaff;
 
   const [issue, setIssue] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Modals state
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
-  const [reopenReason, setReopenReason] = useState('');
-  const [reopenError, setReopenError] = useState('');
-  const [isActionLoading, setIsActionLoading] = useState(false);
+  // Authority Action Modals
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignedTeam, setAssignedTeam] = useState('Plumbing & Water Services');
+  const [assignedStaff, setAssignedStaff] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
 
-  // Quick simulation menu for testing status changes
-  const [isSimulateOpen, setIsSimulateOpen] = useState(false);
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
 
   const fetchIssue = useCallback(async () => {
     setIsLoading(true);
@@ -67,6 +65,12 @@ export default function IssueDetailPage() {
     try {
       const data = await issuesService.getById(id, { simulateDelay: 250 });
       setIssue(data);
+      if (data?.assignedTeam && data.assignedTeam !== 'Unassigned') {
+        setAssignedTeam(data.assignedTeam);
+      }
+      if (data?.assignedStaff && data.assignedStaff !== 'Unassigned') {
+        setAssignedStaff(data.assignedStaff);
+      }
     } catch (err) {
       console.error('Error fetching issue detail:', err);
       setError(err.message || 'Issue not found');
@@ -93,17 +97,17 @@ export default function IssueDetailPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Toggle "+1 I am affected too"
+  // Student Toggle "+1 I am affected too"
   const handleToggleJoin = async () => {
-    if (!issue) return;
+    if (!issue || issue.isReporter || issue.status === 'Resolved' || issue.status === 'Closed') return;
     try {
       const updated = await issuesService.toggleJoinIssue(issue.id);
       setIssue(updated);
       addToast({
         type: updated.hasJoined ? 'success' : 'info',
-        title: updated.hasJoined ? 'Joined report' : 'Left report',
+        title: updated.hasJoined ? 'Marked as affected' : 'Vote removed',
         message: updated.hasJoined
-          ? `You voted on ${issue.referenceId}. Affected count updated to ${updated.affectedCount}.`
+          ? `You marked that ${issue.referenceId} affects you. Affected count is now ${updated.affectedCount}.`
           : `Removed your vote from ${issue.referenceId}.`,
       });
     } catch {
@@ -115,84 +119,81 @@ export default function IssueDetailPage() {
     }
   };
 
-  // Student action: Confirm fixed (Resolved -> Closed)
-  const handleConfirmFixed = async () => {
+  // Authority: Confirm Assignment
+  const handleConfirmAssignment = async () => {
     if (!issue) return;
-    setIsActionLoading(true);
+    setIsAssigning(true);
     try {
-      const updated = await issuesService.confirmFixed(
+      const updated = await issuesService.assignIssue(
         issue.id,
-        'Student confirmed that the repair was inspected and solved.'
+        assignedTeam,
+        assignedStaff || 'Assigned Staff',
+        issue.priority
       );
       setIssue(updated);
-      setIsConfirmModalOpen(false);
+      setIsAssignModalOpen(false);
       addToast({
         type: 'success',
-        title: 'Issue Closed & Confirmed',
-        message: `Thank you! ${issue.referenceId} is now verified and permanently closed.`,
-      });
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Action failed',
-        message: err.message,
-      });
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Student action: Reopen issue (Resolved -> Reopened)
-  const handleReopenIssue = async () => {
-    if (!issue) return;
-    if (!reopenReason.trim()) {
-      setReopenError('Please provide a specific description of why the problem still persists.');
-      return;
-    }
-    setIsActionLoading(true);
-    setReopenError('');
-    try {
-      const updated = await issuesService.reopenIssue(issue.id, reopenReason);
-      setIssue(updated);
-      setIsReopenModalOpen(false);
-      setReopenReason('');
-      addToast({
-        type: 'warning',
-        title: 'Issue Reopened',
-        message: `${issue.referenceId} was reopened with high priority. Estate maintenance notified.`,
-      });
-    } catch (err) {
-      setReopenError(err.message);
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  // Interactive Prototype Simulator: Advance status for demo
-  const handleSimulateStatus = async (targetStatus) => {
-    if (!issue) return;
-    try {
-      let note = `Status updated to ${targetStatus} in prototype demonstration.`;
-      if (targetStatus === 'Resolved') {
-        note = 'Maintenance technician completed valve replacement and water line test.';
-      }
-      const updated = await issuesService.updateStatus(
-        issue.id,
-        targetStatus,
-        note,
-        'Ramesh Kumar (Estate Technician)'
-      );
-      setIssue(updated);
-      setIsSimulateOpen(false);
-      addToast({
-        type: 'info',
-        title: 'Simulated Workflow Step',
-        message: `Status transitioned to "${targetStatus}". Stepper and timeline updated.`,
+        title: 'Work Order Assigned',
+        message: `${issue.referenceId} dispatched to ${assignedTeam}.`,
       });
     } catch {
-      // Ignore
+      addToast({ type: 'error', title: 'Error', message: 'Failed to assign issue.' });
+    } finally {
+      setIsAssigning(false);
     }
   };
+
+  // Authority: Start Work (In Progress)
+  const handleStartWork = async () => {
+    if (!issue) return;
+    try {
+      const updated = await issuesService.updateStatus(
+        issue.id,
+        'In Progress',
+        'Maintenance crew dispatched and repair work actively started on-site.',
+        user?.name || 'Estate Maintenance'
+      );
+      setIssue(updated);
+      addToast({
+        type: 'success',
+        title: 'Work In Progress',
+        message: `${issue.referenceId} moved to In Progress.`,
+      });
+    } catch {
+      addToast({ type: 'error', title: 'Error', message: 'Failed to update status.' });
+    }
+  };
+
+  // Authority: Mark Resolved
+  const handleConfirmResolve = async () => {
+    if (!issue) return;
+    setIsResolving(true);
+    try {
+      const note = resolutionNote.trim() || 'Work order completed and verified on-site by estate authorities.';
+      const updated = await issuesService.updateStatus(
+        issue.id,
+        'Resolved',
+        note,
+        user?.name || 'Estate Maintenance'
+      );
+      setIssue(updated);
+      setIsResolveModalOpen(false);
+      setResolutionNote('');
+      addToast({
+        type: 'success',
+        title: 'Issue Resolved',
+        message: `${issue.referenceId} marked as successfully resolved.`,
+      });
+    } catch {
+      addToast({ type: 'error', title: 'Error', message: 'Failed to resolve issue.' });
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const backUrl = isAdmin ? '/admin' : isStaff ? '/staff' : '/feed';
+  const backLabel = isAdmin ? 'Back to Admin Portal' : isStaff ? 'Back to Staff Portal' : 'Back to Issue Feed';
 
   if (isLoading) {
     return <IssueDetailSkeleton />;
@@ -202,11 +203,11 @@ export default function IssueDetailPage() {
     return (
       <div className="space-y-4">
         <Link
-          to="/feed"
+          to={backUrl}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700"
         >
           <ArrowLeft size={16} />
-          <span>Back to Feed</span>
+          <span>{backLabel}</span>
         </Link>
         <ErrorState
           title="Issue Not Found"
@@ -217,58 +218,26 @@ export default function IssueDetailPage() {
     );
   }
 
-  const isResolved = issue.status === 'Resolved';
-  const isClosed = issue.status === 'Closed';
+  const isResolved = issue.status === 'Resolved' || issue.status === 'Closed';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Breadcrumb & Navigation */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          to="/feed"
+          to={backUrl}
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-brand-600 transition-colors"
         >
           <ArrowLeft size={16} />
-          <span>Back to Issue Feed</span>
+          <span>{backLabel}</span>
         </Link>
-
-        {/* Prototype Demo Switcher */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsSimulateOpen(!isSimulateOpen)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface px-2.5 py-1 text-xs font-medium text-ink hover:bg-brand-50"
-          >
-            <Wrench size={13} className="text-brand-600" />
-            <span>Simulate Status Advance</span>
-          </button>
-          {isSimulateOpen && (
-            <div className="absolute right-0 mt-1 w-52 rounded-xl border border-line bg-surface p-2 shadow-modal z-20 space-y-1 text-xs">
-              <p className="px-2 py-1 font-bold text-muted uppercase text-[10px]">
-                Demo Status Transitions
-              </p>
-              {['Reported', 'Assigned', 'In Progress', 'Resolved', 'Closed'].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => handleSimulateStatus(s)}
-                  className={`w-full text-left px-2.5 py-1.5 rounded font-medium hover:bg-brand-50 transition-colors ${
-                    issue.status === s ? 'text-brand-600 font-bold bg-brand-50/50' : 'text-ink'
-                  }`}
-                >
-                  Set &quot;{s}&quot;
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Main Header Card */}
-      <div className="rounded-2xl border border-line bg-surface p-5 sm:p-7 shadow-card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            {/* Category Icon */}
+      {/* Issue Header Card */}
+      <div className="rounded-xl border border-line bg-surface p-5 sm:p-6 shadow-card space-y-4">
+        {/* Category & Title */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex items-start gap-3.5 min-w-0 flex-1">
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 border border-brand-200"
               title={issue.category}
@@ -298,21 +267,19 @@ export default function IssueDetailPage() {
               <button
                 type="button"
                 onClick={handleCopyReference}
-                className="text-muted hover:text-brand-600 transition-colors ml-1"
+                className="text-muted hover:text-brand-600 transition-colors ml-1 cursor-pointer"
                 title="Copy reference ID"
                 aria-label="Copy reference ID"
               >
-                {copied ? <Check size={14} className="text-teal-700" /> : <Copy size={14} />}
+                {copied ? <Check size={14} className="text-teal-700 stroke-[2.5]" /> : <Copy size={14} />}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Badges Row */}
+        {/* Clean Badges Row (Zero SLA/Score clutter, No emojis) */}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-line/60">
           <StatusBadge status={issue.status} />
-          <PriorityBadge priority={issue.priority} score={issue.priorityScore} />
-          {issue.slaDeadline && <SlaBadge deadline={issue.slaDeadline} created={issue.createdAt} />}
           {issue.isHotspot && <HotspotBadge />}
           {issue.isSafetyRisk && (
             <span className="inline-flex items-center gap-1 rounded-full bg-danger-50 border border-danger/30 px-2.5 py-0.5 text-xs font-medium text-danger">
@@ -320,15 +287,22 @@ export default function IssueDetailPage() {
               Safety Hazard
             </span>
           )}
-          {issue.isReporter && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-0.5 text-xs font-medium text-brand-700">
+          {/* Student-only ownership badges */}
+          {isStudent && issue.isReporter && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
               Reported by you
+            </span>
+          )}
+          {isStudent && issue.hasJoined && !issue.isReporter && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+              <Check size={12} className="text-teal-700 stroke-[2.5]" />
+              You marked affected
             </span>
           )}
         </div>
       </div>
 
-      {/* 2-Column Responsive Layout (DESIGN.md §459: 2/3 main column + 1/3 side column) */}
+      {/* 2-Column Responsive Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Column (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
@@ -387,46 +361,108 @@ export default function IssueDetailPage() {
 
         {/* Side Column (1 col) */}
         <div className="space-y-6">
-          {/* Action Card when Resolved (Confirm Fixed / Reopen) */}
+          {/* Reassuring Notice when Resolved */}
           {isResolved && (
-            <div className="rounded-xl border-2 border-teal-500 bg-teal-50/70 p-5 shadow-card space-y-3.5">
+            <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-5 shadow-card space-y-2">
               <div className="flex items-center gap-2 text-teal-900 font-bold text-sm">
-                <ShieldCheck size={18} className="text-teal-700" />
-                <span>Verification Required</span>
+                <CheckCircle2 size={18} className="text-teal-700" />
+                <span>Issue Resolved</span>
               </div>
               <p className="text-xs text-teal-950 leading-relaxed">
-                The maintenance technician marked this issue as resolved. Please inspect the location and verify if the issue is solved.
-              </p>
-              <div className="pt-1 flex flex-col gap-2">
-                <Button
-                  variant="success"
-                  fullWidth
-                  onClick={() => setIsConfirmModalOpen(true)}
-                  className="bg-teal-700 hover:bg-teal-800 shadow-xs"
-                >
-                  <CheckCircle2 size={16} className="mr-1.5" />
-                  Confirm Fixed
-                </Button>
-                <Button
-                  variant="danger"
-                  fullWidth
-                  onClick={() => setIsReopenModalOpen(true)}
-                >
-                  <RotateCcw size={15} className="mr-1.5" />
-                  Reopen Issue
-                </Button>
-              </div>
-              <p className="text-[11px] text-teal-800 text-center font-medium pt-1">
-                Auto-closes in 72 hours if no action is taken
+                This campus maintenance issue has been addressed and marked resolved by estate authorities.
               </p>
             </div>
           )}
 
-          {/* Affected Students Card & Quick Join */}
+          {/* AUTHORITY CONTROL PANEL (Only for Admin / Staff) */}
+          {(isAdmin || isStaff) && (
+            <div className="rounded-xl border border-brand-200 bg-surface p-5 shadow-card space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-line">
+                <div className="flex items-center gap-2 text-xs font-bold text-ink uppercase tracking-wider">
+                  <Shield size={16} className="text-brand-600" />
+                  <span>Authority Actions</span>
+                </div>
+                <StatusBadge status={issue.status} />
+              </div>
+
+              {issue.status === 'Reported' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted leading-relaxed">
+                    This new report has not been assigned to a department yet.
+                  </p>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => setIsAssignModalOpen(true)}
+                  >
+                    Assign Maintenance Team
+                  </Button>
+                </div>
+              )}
+
+              {issue.status === 'Assigned' && (
+                <div className="space-y-2.5">
+                  <p className="text-xs text-muted leading-relaxed">
+                    Assigned to <strong className="text-ink">{issue.assignedTeam}</strong>.
+                  </p>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={handleStartWork}
+                    className="inline-flex items-center justify-center gap-2"
+                  >
+                    <Play size={14} />
+                    <span>Start Work (Mark In Progress)</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    size="sm"
+                    onClick={() => setIsAssignModalOpen(true)}
+                  >
+                    Reassign Team or Technician
+                  </Button>
+                </div>
+              )}
+
+              {issue.status === 'In Progress' && (
+                <div className="space-y-2.5">
+                  <p className="text-xs text-muted leading-relaxed">
+                    Repairs are actively underway by <strong className="text-ink">{issue.assignedTeam}</strong>.
+                  </p>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={() => setIsResolveModalOpen(true)}
+                    className="bg-teal-600 hover:bg-teal-700 text-white inline-flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Mark Issue as Resolved</span>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    size="sm"
+                    onClick={() => setIsAssignModalOpen(true)}
+                  >
+                    Reassign Crew
+                  </Button>
+                </div>
+              )}
+
+              {isResolved && (
+                <div className="text-center py-2 text-xs font-semibold text-teal-800 bg-teal-50 rounded-lg border border-teal-200">
+                  ✓ Ticket resolved and work verified
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STUDENT IMPACT CARD */}
           <div className="rounded-xl border border-line bg-surface p-5 shadow-card space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-ink uppercase tracking-wider">
-                <Users size={16} className="text-orange-500" />
+                <Users size={16} className="text-body" />
                 <span>Student Impact</span>
               </div>
               <span className="text-xs text-muted font-medium">Campus Voice</span>
@@ -442,34 +478,50 @@ export default function IssueDetailPage() {
             </div>
 
             <p className="text-xs text-muted leading-relaxed">
-              When multiple students flag the same problem, our triage system automatically raises the priority score.
+              When multiple students flag the same problem, estate authorities prioritize and dispatch maintenance faster.
             </p>
 
-            <Button
-              variant={issue.hasJoined ? 'secondary' : 'primary'}
-              fullWidth
-              onClick={handleToggleJoin}
-              className={
-                issue.hasJoined
-                  ? 'border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100'
-                  : 'bg-brand-500 hover:bg-brand-600'
-              }
-            >
-              <Heart
-                size={16}
-                className={`mr-1.5 ${issue.hasJoined ? 'fill-orange-600 text-orange-600' : ''}`}
-              />
-              <span>
-                {issue.hasJoined ? 'You marked affected' : 'I am affected too'}
-              </span>
-            </Button>
+            {/* ONLY STUDENTS GET THE VOTE / MARK AFFECTED BUTTON */}
+            {isStudent && (
+              <Button
+                variant={issue.hasJoined ? 'secondary' : 'primary'}
+                fullWidth
+                disabled={issue.isReporter || isResolved}
+                onClick={handleToggleJoin}
+                className={
+                  isResolved
+                    ? 'bg-surface-muted text-muted border border-line cursor-default'
+                    : issue.isReporter
+                    ? 'bg-surface-muted text-muted border border-line cursor-default'
+                    : issue.hasJoined
+                    ? 'border-teal-300 bg-teal-50 text-teal-800 hover:bg-teal-100'
+                    : 'bg-brand-500 hover:bg-brand-600'
+                }
+              >
+                {isResolved ? (
+                  <span>Resolved (Voting closed)</span>
+                ) : issue.isReporter ? (
+                  <span>You created this report</span>
+                ) : issue.hasJoined ? (
+                  <>
+                    <Check size={16} className="mr-1.5 text-teal-700 stroke-[2.5]" />
+                    <span>You marked affected</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-1.5 font-bold">+1</span>
+                    <span>Mark as affected</span>
+                  </>
+                )}
+              </Button>
+            )}
           </div>
 
-          {/* Assignment & SLA Countdown Card */}
+          {/* Assignment & Details Card */}
           <div className="rounded-xl border border-line bg-surface p-5 shadow-card space-y-4 text-xs">
             <h4 className="font-bold text-ink uppercase tracking-wider text-xs flex items-center gap-2">
               <UserCheck size={16} className="text-brand-600" />
-              <span>Assignment & Schedule</span>
+              <span>Assignment &amp; Details</span>
             </h4>
 
             <div className="space-y-3">
@@ -488,17 +540,6 @@ export default function IssueDetailPage() {
               )}
 
               <div className="flex items-start justify-between pb-2.5 border-b border-line/60">
-                <span className="text-muted">SLA Deadline:</span>
-                <div className="text-right">
-                  {issue.slaDeadline ? (
-                    <SlaBadge deadline={issue.slaDeadline} created={issue.createdAt} />
-                  ) : (
-                    <span className="text-muted">N/A</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-start justify-between pb-2.5 border-b border-line/60">
                 <span className="text-muted">Reported On:</span>
                 <span className="font-medium text-ink" title={formatAbsoluteDate(issue.createdAt)}>
                   {formatRelativeTime(issue.createdAt)}
@@ -513,94 +554,98 @@ export default function IssueDetailPage() {
               </div>
             </div>
           </div>
-
-          {/* Collapsible Priority Explainer */}
-          <PriorityExplainer
-            priority={issue.priority}
-            priorityScore={issue.priorityScore}
-            priorityBreakdown={issue.priorityBreakdown}
-          />
         </div>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Authority Assign Modal */}
       <Modal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        title="Confirm Issue Resolved"
-        description="Verify that this maintenance complaint is completely fixed."
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        title={`Assign Maintenance Team (${issue.referenceId})`}
+        description="Select the department and lead technician to dispatch to the site."
       >
         <div className="space-y-4">
-          <p className="text-sm text-body leading-relaxed">
-            By confirming, status for reference <strong className="font-mono text-ink">{issue.referenceId}</strong> will transition to <strong className="text-teal-700">Closed</strong>.
-          </p>
-          <div className="p-3 rounded-lg bg-teal-50 border border-teal-200 text-xs text-teal-900 leading-snug">
-            ✓ Your confirmation assists estate management in tracking technician performance and closing the work order.
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-ink">Assigned Department / Team</label>
+            <select
+              value={assignedTeam}
+              onChange={(e) => setAssignedTeam(e.target.value)}
+              className="w-full h-10 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
+            >
+              <option value="Plumbing & Water Services">Plumbing & Water Services</option>
+              <option value="Electrical Works Team">Electrical Works Team</option>
+              <option value="Campus Housekeeping & Sanitation">Campus Housekeeping & Sanitation</option>
+              <option value="Network Operations Center (NOC)">Network Operations Center (NOC)</option>
+              <option value="Carpentry & Furniture Workshop">Carpentry & Furniture Workshop</option>
+              <option value="Civil & Structural Maintenance">Civil & Structural Maintenance</option>
+              <option value="HVAC & Refrigeration Services">HVAC & Refrigeration Services</option>
+            </select>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-ink">Lead Technician Name (Optional)</label>
+            <input
+              type="text"
+              value={assignedStaff}
+              onChange={(e) => setAssignedStaff(e.target.value)}
+              placeholder="e.g. Ramesh Kumar, Sunita Bai..."
+              className="w-full h-10 rounded-lg border border-line-strong bg-surface px-3 text-sm text-ink"
+            />
+          </div>
+
           <div className="flex items-center justify-end gap-2.5 pt-2">
             <Button
               variant="secondary"
-              onClick={() => setIsConfirmModalOpen(false)}
-              disabled={isActionLoading}
+              onClick={() => setIsAssignModalOpen(false)}
+              disabled={isAssigning}
             >
               Cancel
             </Button>
             <Button
-              variant="success"
-              onClick={handleConfirmFixed}
-              loading={isActionLoading}
-              className="bg-teal-700 hover:bg-teal-800"
+              variant="primary"
+              onClick={handleConfirmAssignment}
+              loading={isAssigning}
             >
-              Yes, Confirm Fixed
+              Confirm Assignment
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Reopen Modal */}
+      {/* Authority Resolve Modal */}
       <Modal
-        isOpen={isReopenModalOpen}
-        onClose={() => setIsReopenModalOpen(false)}
-        title="Reopen Maintenance Issue"
-        description="State why the issue is not resolved so technicians can return with correct parts."
+        isOpen={isResolveModalOpen}
+        onClose={() => setIsResolveModalOpen(false)}
+        title={`Mark Resolved (${issue.referenceId})`}
+        description="Record the work resolution details for estate records and the student timeline."
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="reopen-reason" className="block text-xs font-bold text-ink">
-              Reason for Reopening <span className="text-danger">*</span>
-            </label>
+            <label className="text-xs font-bold text-ink">Work Resolution Report</label>
             <textarea
-              id="reopen-reason"
-              rows={3}
-              value={reopenReason}
-              onChange={(e) => {
-                setReopenReason(e.target.value);
-                setReopenError('');
-              }}
-              placeholder="e.g. The tap still drips when shut, or the leak has moved to the pipe joint underneath..."
-              className="w-full rounded-lg border border-line-strong p-3 text-sm text-ink placeholder:text-muted focus:border-danger focus:ring-2 focus:ring-danger/20"
+              rows={4}
+              value={resolutionNote}
+              onChange={(e) => setResolutionNote(e.target.value)}
+              placeholder="Describe the repair work conducted (e.g. Swapped broken mixer tap with new OEM valve, tested high pressure seals and verified water flow)..."
+              className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm text-ink focus:border-brand-500 focus:ring-brand-100"
             />
-            {reopenError && <p className="text-xs font-semibold text-danger">{reopenError}</p>}
-          </div>
-
-          <div className="p-3 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-950">
-            ⚠️ Reopening will increase the priority by +10 points and re-alert the assigned department supervisor.
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-2">
             <Button
               variant="secondary"
-              onClick={() => setIsReopenModalOpen(false)}
-              disabled={isActionLoading}
+              onClick={() => setIsResolveModalOpen(false)}
+              disabled={isResolving}
             >
               Cancel
             </Button>
             <Button
-              variant="danger"
-              onClick={handleReopenIssue}
-              loading={isActionLoading}
+              variant="primary"
+              onClick={handleConfirmResolve}
+              loading={isResolving}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
             >
-              Reopen Ticket
+              Confirm Resolution
             </Button>
           </div>
         </div>

@@ -1,40 +1,37 @@
-// features/issues/MyIssuesPage.jsx - Student issue tracking page conforming to DESIGN.md §454-456
+// features/issues/MyIssuesPage.jsx - Student issue tracking page
+// Minimalistic design with 2 clean tabs (Active Reports & Resolved History)
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Inbox,
   CheckCircle2,
-  Archive,
   PlusCircle,
-  AlertCircle,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
 } from 'lucide-react';
 import { IssueCard, FilterBar } from './components';
-import { IssueCardSkeleton, EmptyState, ErrorState, useToast } from '../../components/ui';
+import { IssueCardSkeleton, EmptyState, ErrorState } from '../../components/ui';
 import issuesService from './issuesService';
 
 export default function MyIssuesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { addToast } = useToast();
 
-  const currentTab = searchParams.get('tab') || 'active'; // 'active' | 'awaiting' | 'closed'
+  // Tab: 'active' | 'resolved' (fallbacks from legacy 'awaiting' / 'closed' map to 'resolved')
+  const rawTab = searchParams.get('tab') || 'active';
+  const currentTab = rawTab === 'awaiting' || rawTab === 'closed' ? 'resolved' : rawTab;
 
   const [filters, setFilters] = useState({
     search: '',
     building: 'all',
     category: 'all',
     status: 'all',
-    priority: 'all',
     sort: 'newest',
   });
 
   const [page, setPage] = useState(1);
   const limit = 8;
   const [data, setData] = useState({ issues: [], total: 0, totalPages: 1 });
-  const [tabCounts, setTabCounts] = useState({ active: 0, awaiting: 0, closed: 0 });
+  const [tabCounts, setTabCounts] = useState({ active: 0, resolved: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -47,13 +44,11 @@ export default function MyIssuesPage() {
       ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
     ).length;
 
-    const awaitingCount = myIssues.filter((i) => i.status === 'Resolved').length;
-
-    const closedCount = myIssues.filter((i) =>
-      ['Closed', 'Rejected', 'Merged'].includes(i.status)
+    const resolvedCount = myIssues.filter((i) =>
+      ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
     ).length;
 
-    setTabCounts({ active: activeCount, awaiting: awaitingCount, closed: closedCount });
+    setTabCounts({ active: activeCount, resolved: resolvedCount });
   }, []);
 
   // Fetch my issues according to current tab and filters
@@ -61,19 +56,14 @@ export default function MyIssuesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const tabParam =
-        currentTab === 'awaiting'
-          ? 'my-awaiting'
-          : currentTab === 'closed'
-          ? 'my-closed'
-          : 'my-active';
+      const tabParam = currentTab === 'resolved' ? 'my-resolved' : 'my-active';
 
       const result = await issuesService.getIssues({
         page,
         limit,
         tab: tabParam,
         ...filters,
-        simulateDelay: 250,
+        simulateDelay: 200,
       });
 
       setData(result);
@@ -100,31 +90,6 @@ export default function MyIssuesPage() {
     setPage(1);
   };
 
-  const handleToggleJoin = async (issue) => {
-    try {
-      const updated = await issuesService.toggleJoinIssue(issue.id);
-      setData((prev) => ({
-        ...prev,
-        issues: prev.issues.map((i) => (i.id === issue.id ? updated : i)),
-      }));
-      refreshTabCounts();
-
-      addToast({
-        type: updated.hasJoined ? 'success' : 'info',
-        title: updated.hasJoined ? 'Joined issue' : 'Left issue',
-        message: updated.hasJoined
-          ? `You will now receive updates on ${issue.referenceId}.`
-          : `Removed from ${issue.referenceId}.`,
-      });
-    } catch {
-      addToast({
-        type: 'error',
-        title: 'Error',
-        message: 'Failed to update vote.',
-      });
-    }
-  };
-
   const startIndex = (page - 1) * limit + 1;
   const endIndex = Math.min(page * limit, data.total);
 
@@ -137,7 +102,7 @@ export default function MyIssuesPage() {
             My Tracked Issues
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Track progress on problems you reported or joined, and verify completed maintenance repairs.
+            Track real-time progress on problems you reported or joined across campus.
           </p>
         </div>
 
@@ -150,7 +115,7 @@ export default function MyIssuesPage() {
         </Link>
       </div>
 
-      {/* Tabs Navigation (DESIGN.md §454: Active · Awaiting confirmation · Closed) */}
+      {/* Tabs Navigation (Active Reports · Resolved Issues) */}
       <div className="border-b border-line">
         <nav className="flex space-x-6 sm:space-x-8" aria-label="My Issues Tabs">
           <button
@@ -163,7 +128,7 @@ export default function MyIssuesPage() {
             }`}
           >
             <Inbox size={18} />
-            <span>Active Issues</span>
+            <span>Active Reports</span>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                 currentTab === 'active'
@@ -177,62 +142,27 @@ export default function MyIssuesPage() {
 
           <button
             type="button"
-            onClick={() => handleTabChange('awaiting')}
+            onClick={() => handleTabChange('resolved')}
             className={`flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium transition-colors ${
-              currentTab === 'awaiting'
+              currentTab === 'resolved'
                 ? 'border-teal-600 text-teal-700 font-semibold'
                 : 'border-transparent text-muted hover:border-line-strong hover:text-ink'
             }`}
           >
             <CheckCircle2 size={18} />
-            <span>Awaiting Confirmation</span>
-            {tabCounts.awaiting > 0 && (
-              <span className="animate-pulse rounded-full bg-teal-100 px-2 py-0.5 text-xs font-bold text-teal-800 border border-teal-300">
-                {tabCounts.awaiting} action needed
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('closed')}
-            className={`flex items-center gap-2 border-b-2 py-3 px-1 text-sm font-medium transition-colors ${
-              currentTab === 'closed'
-                ? 'border-brand-500 text-brand-600 font-semibold'
-                : 'border-transparent text-muted hover:border-line-strong hover:text-ink'
-            }`}
-          >
-            <Archive size={18} />
-            <span>Closed History</span>
+            <span>Resolved History</span>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                currentTab === 'closed'
-                  ? 'bg-brand-100 text-brand-700'
+                currentTab === 'resolved'
+                  ? 'bg-teal-100 text-teal-800'
                   : 'bg-surface-muted text-muted'
               }`}
             >
-              {tabCounts.closed}
+              {tabCounts.resolved}
             </span>
           </button>
         </nav>
       </div>
-
-      {/* Prominent Action Banner for "Awaiting Confirmation" Tab (DESIGN.md §5.2) */}
-      {currentTab === 'awaiting' && (
-        <div className="rounded-xl border border-teal-300 bg-teal-50 p-4 sm:p-5 shadow-xs flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white shadow-xs">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-teal-900">
-              Needs your confirmation
-            </h3>
-            <p className="mt-0.5 text-xs sm:text-sm text-teal-950 leading-relaxed">
-              Staff have marked these issues resolved. Please check the physical location and click &quot;Confirm Fixed&quot; or &quot;Reopen&quot; if the problem still persists.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* FilterBar inside My Issues */}
       <FilterBar
@@ -255,19 +185,15 @@ export default function MyIssuesPage() {
         />
       ) : data.issues.length === 0 ? (
         <EmptyState
-          icon={currentTab === 'awaiting' ? 'check' : 'inbox'}
+          icon={currentTab === 'resolved' ? 'check' : 'inbox'}
           title={
-            currentTab === 'awaiting'
-              ? 'No issues awaiting confirmation'
-              : currentTab === 'closed'
-              ? 'No closed reports yet'
-              : 'No reports yet'
+            currentTab === 'resolved'
+              ? 'No resolved reports yet'
+              : 'No active reports'
           }
           description={
-            currentTab === 'awaiting'
-              ? 'All your maintenance complaints are either in progress or have already been confirmed and closed.'
-              : currentTab === 'closed'
-              ? 'Issues you verify and close will be permanently recorded here in your resolution history.'
+            currentTab === 'resolved'
+              ? 'When estate maintenance finishes repairing your reported or joined complaints, they will appear here.'
               : 'Spot something broken on campus? Report it in under a minute to notify the estate maintenance crew.'
           }
           actionLabel={currentTab === 'active' ? 'Report an Issue' : undefined}
@@ -288,8 +214,7 @@ export default function MyIssuesPage() {
                 key={issue.id}
                 issue={issue}
                 variant="default"
-                onToggleJoin={handleToggleJoin}
-                showJoinButton={true}
+                showJoinButton={false}
               />
             ))}
           </div>

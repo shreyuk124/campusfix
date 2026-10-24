@@ -1,19 +1,17 @@
 // features/issues/components/FilterBar.jsx - Reusable search, filter, and sort bar
-// Conforms to DESIGN.md §4.11 with responsive mobile bottom sheet
+// Minimalistic design without SLA or internal priority scoring
 import React, { useState, useEffect } from 'react';
 import {
   Search,
   Filter,
   X,
-  ArrowUpDown,
   RotateCcw,
   SlidersHorizontal,
   Building2,
   Tag,
   CircleDot,
-  Gauge,
 } from 'lucide-react';
-import { STATUSES, CATEGORIES, CAMPUS_BUILDINGS, PRIORITY_BANDS } from '../../../lib/constants';
+import { STATUSES, CATEGORIES, CAMPUS_BUILDINGS } from '../../../lib/constants';
 import Button from '../../../components/ui/Button';
 
 export function FilterBar({
@@ -22,7 +20,6 @@ export function FilterBar({
     building: 'all',
     category: 'all',
     status: 'all',
-    priority: 'all',
     sort: 'newest',
   },
   onFilterChange,
@@ -53,7 +50,6 @@ export function FilterBar({
       building: 'all',
       category: 'all',
       status: 'all',
-      priority: 'all',
       sort: 'newest',
     });
   };
@@ -63,7 +59,6 @@ export function FilterBar({
     filters.building !== 'all',
     filters.category !== 'all',
     showStatusFilter && filters.status !== 'all',
-    filters.priority !== 'all',
     Boolean(filters.search),
   ].filter(Boolean).length;
 
@@ -163,21 +158,6 @@ export function FilterBar({
                 ))}
               </select>
             )}
-
-            {/* Priority Dropdown */}
-            <select
-              value={filters.priority}
-              onChange={(e) => handleChange('priority', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
-              aria-label="Filter by priority"
-            >
-              <option value="all">All Priorities</option>
-              {PRIORITY_BANDS.map((p) => (
-                <option key={p.key} value={p.label}>
-                  {p.label} Priority
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Sort Dropdown */}
@@ -189,9 +169,7 @@ export function FilterBar({
               aria-label="Sort issues by"
             >
               <option value="newest">Sort: Newest first</option>
-              <option value="most-affected">Sort: Most affected</option>
-              <option value="highest-priority">Sort: Highest priority</option>
-              <option value="due-soon">Sort: Due soonest (SLA)</option>
+              <option value="most-affected">Sort: Most affected (+1)</option>
               <option value="oldest">Sort: Oldest first</option>
             </select>
           </div>
@@ -262,59 +240,41 @@ export function FilterBar({
             </span>
           )}
 
-          {filters.priority !== 'all' && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-medium text-brand-700 border border-brand-200">
-              Priority: {filters.priority}
-              <button
-                type="button"
-                onClick={() => handleChange('priority', 'all')}
-                className="hover:text-brand-900 ml-0.5"
-                aria-label="Remove priority filter"
-              >
-                <X size={12} />
-              </button>
-            </span>
-          )}
-
           <button
             type="button"
             onClick={handleClearAll}
-            className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-danger hover:underline"
+            className="ml-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800 hover:underline"
           >
-            <RotateCcw size={11} />
+            <RotateCcw size={12} />
             <span>Clear all</span>
           </button>
         </div>
       )}
 
-      {/* Mobile Filters Bottom Sheet Dialog */}
+      {/* Mobile Filters Slide-over / Sheet */}
       {isMobileSheetOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center p-0 lg:hidden"
-          role="dialog"
-          aria-modal="true"
-        >
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-ink/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-ink/40 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileSheetOpen(false)}
+            aria-hidden="true"
           />
 
-          {/* Drawer Sheet */}
-          <div className="relative z-10 w-full max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-line bg-surface p-5 shadow-modal animate-in slide-in-from-bottom duration-200 space-y-4">
-            <div className="mx-auto h-1.5 w-12 rounded-full bg-line-strong" />
-
-            <div className="flex items-center justify-between pb-2 border-b border-line">
+          {/* Bottom Sheet Modal */}
+          <div className="relative mt-auto w-full rounded-t-2xl border-t border-line bg-surface p-5 shadow-modal animate-in slide-in-from-bottom duration-200 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center gap-2">
-                <SlidersHorizontal size={18} className="text-brand-600" />
-                <h3 className="text-base font-bold text-ink">Filter Issues</h3>
+                <Filter size={18} className="text-brand-600" />
+                <h3 className="text-base font-bold text-ink">Filter Campus Issues</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileSheetOpen(false)}
-                className="p-1 text-muted hover:text-ink rounded"
+                className="rounded-lg p-1.5 text-muted hover:bg-surface-muted hover:text-ink"
+                aria-label="Close filters"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
@@ -322,7 +282,7 @@ export function FilterBar({
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
                 <Building2 size={14} className="text-muted" />
-                <span>Building</span>
+                <span>Building / Facility</span>
               </label>
               <select
                 value={filters.building}
@@ -379,26 +339,6 @@ export function FilterBar({
                 </select>
               </div>
             )}
-
-            {/* Priority */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                <Gauge size={14} className="text-muted" />
-                <span>Priority</span>
-              </label>
-              <select
-                value={filters.priority}
-                onChange={(e) => handleChange('priority', e.target.value)}
-                className="w-full h-11 rounded-lg border border-line-strong bg-surface pl-3.5 pr-9 text-sm text-ink cursor-pointer focus:border-brand-500 focus:ring-brand-100"
-              >
-                <option value="all">All Priorities</option>
-                {PRIORITY_BANDS.map((p) => (
-                  <option key={p.key} value={p.label}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             {/* Actions */}
             <div className="pt-3 flex items-center gap-3">

@@ -1,4 +1,4 @@
-﻿import mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import fs from 'fs';
 import { Issue } from '../models/Issue.js';
 import { Report } from '../models/Report.js';
@@ -77,7 +77,7 @@ export const getSimilarIssues = async (req, res, next) => {
 };
 
 /**
- * @desc    Create a new issue with 1-3 photo evidence files
+ * @desc    Create a new issue with optional photo evidence files (0-3 photos)
  * @route   POST /api/v1/issues
  * @access  Public / Student
  */
@@ -86,19 +86,15 @@ export const createIssue = async (req, res, next) => {
   let uploadedFilePaths = [];
 
   try {
-    // Step 1: File Verification - Ensure at least 1 photo was uploaded
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least 1 photo is required as evidence.',
-      });
+    // Step 1: File Verification - Photos are optional (up to 3 supported)
+    if (req.files && req.files.length > 0) {
+      uploadedFilePaths = req.files.map((file) => file.path);
     }
 
-    // Capture disk paths from Multer so we can delete them if MongoDB fails
-    uploadedFilePaths = req.files.map((file) => file.path);
-
     // Transform disk filenames into client-consumable URL paths
-    const photoUrls = req.files.map((file) => `/uploads/${file.filename}`);
+    const photoUrls = req.files && req.files.length > 0
+      ? req.files.map((file) => `/uploads/${file.filename}`)
+      : [];
 
     // Step 2: Form Body Extraction & Validation
     const {

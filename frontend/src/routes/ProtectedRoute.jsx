@@ -6,11 +6,17 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role))) {
-    return <Navigate to="/" replace />;
+    if (user?.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    if (user?.role === 'staff') {
+      return <Navigate to="/staff" replace />;
+    }
+    return <Navigate to="/feed" replace />;
   }
 
   return children;

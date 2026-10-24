@@ -7,12 +7,15 @@
  * - GET /api/v1/issues/:id (Comprehensive single issue details)
  * - GET /api/v1/issues/mine (Authenticated student's submitted issues)
  * 
- * Dependency-Independent Design:
- * - Accepts an injected Issue model / repository, or uses setIssueModel().
- * - Does NOT create a competing Mongoose model or fake database queries.
- * - Enforces Privacy Rule §9: Strips student personal identifiers from public outputs.
+ * Subtask 7: Real Model Integration
+ * - Directly wires to Mongoose Issue model (Sumedh / Member 2).
+ * - Enforces dependency safety if MongoDB connection is pending.
+ * - Safely checks registered schemas (Building, Category, User) before populating.
+ * - Enforces Privacy Rule § 9: Strips student personal identifiers from public outputs.
  */
 
+import mongoose from 'mongoose';
+import { Issue } from '../models/Issue.js';
 import {
   parsePagination,
   parseSort,
@@ -22,11 +25,11 @@ import {
   QueryValidationError,
 } from '../utils/feedQueryHelpers.js';
 
-let registeredIssueModel = null;
+let registeredIssueModel = Issue || null;
 
 /**
- * Configure the active Issue model when teammate implementation arrives
- * @param {Object} model - Mongoose Issue model
+ * Configure or override the active Issue model (e.g. for testing)
+ * @param {Object} model - Mongoose Issue model or mock repository
  */
 export function setIssueModel(model) {
   registeredIssueModel = model;
@@ -36,12 +39,28 @@ export function setIssueModel(model) {
  * Helper to get the model or return null
  */
 function getModel(overrideModel) {
-  return overrideModel || registeredIssueModel;
+  if (overrideModel !== undefined) {
+    return overrideModel;
+  }
+  return registeredIssueModel;
+}
+
+/**
+ * Verifies whether the model is available and connected
+ */
+function isModelReady(model) {
+  if (!model) return false;
+  // If it is a real Mongoose model backed by a database connection, check connection state
+  if (model.db && model.db.readyState !== undefined) {
+    return model.db.readyState === 1;
+  }
+  // Mock models in unit tests are ready by default
+  return true;
 }
 
 /**
  * Sanitizes an issue document for public consumption.
- * Privacy Rule §9: Reporter identity is NEVER exposed to public callers.
+ * Privacy Rule § 9: Reporter identity is NEVER exposed to public callers.
  * @param {Object} doc - Raw issue object or Mongoose document
  * @returns {Object} Public-safe issue object
  */
@@ -77,12 +96,12 @@ export function createFeedController(deps = {}) {
   async function getFeed(req, res, next) {
     try {
       const Model = getModel(deps.issueModel);
-      if (!Model) {
+      if (!isModelReady(Model)) {
         return res.status(503).json({
           success: false,
           error: {
             code: 'DEPENDENCY_UNAVAILABLE',
-            message: 'Issue model is not connected. Pending Member 2 model integration.',
+            message: 'Issue model is not connected. Pending Member 2 model integration or live database connection.',
           },
         });
       }
@@ -92,16 +111,15 @@ export function createFeedController(deps = {}) {
       const filter = buildFilter(req.query);
 
       // Execute query with standard Mongoose populate paths
-      const query = Model.find(filter)
+      let query = Model.find(filter)
         .sort(sortObj)
         .skip(skip)
         .limit(limit);
 
       if (typeof query.populate === 'function') {
-        query
-          .populate('building', 'name campus')
-          .populate('category', 'label baseSeverity icon')
-          .populate('createdBy', 'role');
+        if (mongoose.models.Building) query = query.populate('building', 'name campus');
+        if (mongoose.models.Category) query = query.populate('category', 'label baseSeverity icon');
+        if (mongoose.models.User) query = query.populate('createdBy', 'role');
       }
 
       const [rawIssues, total] = await Promise.all([
@@ -140,12 +158,12 @@ export function createFeedController(deps = {}) {
   async function getIssueById(req, res, next) {
     try {
       const Model = getModel(deps.issueModel);
-      if (!Model) {
+      if (!isModelReady(Model)) {
         return res.status(503).json({
           success: false,
           error: {
             code: 'DEPENDENCY_UNAVAILABLE',
-            message: 'Issue model is not connected. Pending Member 2 model integration.',
+            message: 'Issue model is not connected. Pending Member 2 model integration or live database connection.',
           },
         });
       }
@@ -157,10 +175,9 @@ export function createFeedController(deps = {}) {
 
       let query = Model.findOne(queryCriteria);
       if (typeof query.populate === 'function') {
-        query = query
-          .populate('building', 'name campus')
-          .populate('category', 'label baseSeverity icon')
-          .populate('createdBy', 'role');
+        if (mongoose.models.Building) query = query.populate('building', 'name campus');
+        if (mongoose.models.Category) query = query.populate('category', 'label baseSeverity icon');
+        if (mongoose.models.User) query = query.populate('createdBy', 'role');
       }
 
       const rawIssue = await (query.exec ? query.exec() : query);
@@ -197,7 +214,7 @@ export function createFeedController(deps = {}) {
   /**
    * GET /api/v1/issues/mine
    * Authenticated student's submitted issues
-   * Requires: req.user._id (populated by Varsh's authMiddleware)
+   * Requires: req.user._id
    */
   async function getMyIssues(req, res, next) {
     try {
@@ -214,12 +231,12 @@ export function createFeedController(deps = {}) {
       }
 
       const Model = getModel(deps.issueModel);
-      if (!Model) {
+      if (!isModelReady(Model)) {
         return res.status(503).json({
           success: false,
           error: {
             code: 'DEPENDENCY_UNAVAILABLE',
-            message: 'Issue model is not connected. Pending Member 2 model integration.',
+            message: 'Issue model is not connected. Pending Member 2 model integration or live database connection.',
           },
         });
       }
@@ -229,15 +246,14 @@ export function createFeedController(deps = {}) {
       // Filter exclusively by the logged-in student's ID
       const filter = { createdBy: userId };
 
-      const query = Model.find(filter)
+      let query = Model.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
 
       if (typeof query.populate === 'function') {
-        query
-          .populate('building', 'name campus')
-          .populate('category', 'label icon');
+        if (mongoose.models.Building) query = query.populate('building', 'name campus');
+        if (mongoose.models.Category) query = query.populate('category', 'label icon');
       }
 
       const [rawIssues, total] = await Promise.all([

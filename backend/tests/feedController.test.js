@@ -11,6 +11,7 @@ import {
   createFeedController,
   sanitizePublicIssue,
 } from '../src/controllers/feedController.js';
+import { Issue } from '../src/models/Issue.js';
 
 // Helper to create mock Express req and res
 function createMockHttp(reqOverrides = {}) {
@@ -273,6 +274,43 @@ describe('Member 3: feedController Unit Tests', () => {
       assert.equal(res.body.success, true);
       assert.equal(res.body.data.length, 1);
       assert.equal(res.body.data[0].title, 'My ticket 1');
+    });
+  });
+describe('Subtask 7: Real Mongoose Model Integration', () => {
+    test('Mongoose Issue schema paths align with feed query filters and populate paths', () => {
+      const paths = Object.keys(Issue.schema.paths);
+      assert.ok(paths.includes('refId'));
+      assert.ok(paths.includes('title'));
+      assert.ok(paths.includes('category'));
+      assert.ok(paths.includes('building'));
+      assert.ok(paths.includes('campus'));
+      assert.ok(paths.includes('status'));
+      assert.ok(paths.includes('priorityScore'));
+      assert.ok(paths.includes('priorityBand'));
+      assert.ok(paths.includes('reportCount'));
+      assert.ok(paths.includes('createdBy'));
+      assert.ok(paths.includes('createdAt'));
+      assert.ok(paths.includes('updatedAt'));
+    });
+
+    test('real Mongoose Issue document sanitizes correctly with Privacy Rule § 9', () => {
+      const issueDoc = new Issue({
+        refId: 'CF-2026-0001',
+        title: 'Broken desk in LH-101',
+        category: '507f1f77bcf86cd799439011',
+        building: '507f1f77bcf86cd799439012',
+        campus: 'north',
+        locationText: 'Room 101, 1st floor',
+        description: 'Desk leg broken',
+        photos: ['https://example.com/p1.jpg'],
+        createdBy: '507f1f77bcf86cd799439013',
+      });
+
+      const sanitized = sanitizePublicIssue(issueDoc);
+      assert.equal(sanitized.refId, 'CF-2026-0001');
+      assert.equal(sanitized.title, 'Broken desk in LH-101');
+      assert.equal(sanitized.campus, 'north');
+      assert.equal(sanitized.__v, undefined);
     });
   });
 });

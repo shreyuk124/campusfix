@@ -3,13 +3,10 @@ import React from 'react';
 import {
   CircleDot,
   UserCheck,
-  Wrench,
+  RefreshCw,
   CheckCircle2,
-  Archive,
-  RotateCcw,
   XCircle,
-  GitMerge,
-  Flame,
+  AlertCircle,
   Clock,
   AlertTriangle,
 } from 'lucide-react';
@@ -24,41 +21,39 @@ export function StatusBadge({ status, className = '' }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.Reported;
 
   const renderIcon = () => {
-    const size = 13;
-    const strokeWidth = 2;
+    const iconProps = { size: 12, className: 'shrink-0', 'aria-hidden': 'true' };
     switch (status) {
       case 'Reported':
-        return <CircleDot size={size} strokeWidth={strokeWidth} />;
+        return <CircleDot {...iconProps} />;
       case 'Assigned':
-        return <UserCheck size={size} strokeWidth={strokeWidth} />;
+        return <UserCheck {...iconProps} />;
       case 'In Progress':
-        return <Wrench size={size} strokeWidth={strokeWidth} />;
+        return <RefreshCw {...iconProps} className="shrink-0 animate-spin" />;
       case 'Resolved':
-        return <CheckCircle2 size={size} strokeWidth={strokeWidth} />;
       case 'Closed':
-        return <Archive size={size} strokeWidth={strokeWidth} />;
+        return <CheckCircle2 {...iconProps} />;
       case 'Reopened':
-        return <RotateCcw size={size} strokeWidth={strokeWidth} />;
+        return <AlertCircle {...iconProps} />;
       case 'Rejected':
-        return <XCircle size={size} strokeWidth={strokeWidth} />;
+        return <XCircle {...iconProps} />;
       case 'Merged':
-        return <GitMerge size={size} strokeWidth={strokeWidth} />;
+        return <CircleDot {...iconProps} />;
       default:
-        return <CircleDot size={size} strokeWidth={strokeWidth} />;
+        return <CircleDot {...iconProps} />;
     }
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${className}`}
       style={{
         backgroundColor: config.bg,
         color: config.text,
-        borderColor: config.border || 'transparent',
+        border: `1px solid ${config.border || 'transparent'}`,
       }}
     >
       {renderIcon()}
-      <span>{config.label}</span>
+      <span>{config.label || status}</span>
     </span>
   );
 }
@@ -69,7 +64,6 @@ export function StatusBadge({ status, className = '' }) {
  * Rule from DESIGN.md: Critical is solid red, the only solid-fill badge
  */
 export function PriorityBadge({ priority, score, className = '' }) {
-  // Normalize priority key
   let band = null;
   if (score !== undefined && score !== null) {
     band = PRIORITY_BANDS.find((b) => score >= b.min && score <= b.max);
@@ -89,24 +83,24 @@ export function PriorityBadge({ priority, score, className = '' }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isCritical ? 'bg-danger text-white shadow-xs' : 'border'
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+        isCritical ? 'animate-pulse font-bold tracking-wide' : ''
       } ${className}`}
-      style={
-        isCritical
-          ? { backgroundColor: '#D92D20', color: '#FFFFFF' }
-          : {
-              backgroundColor: band.bg,
-              color: band.fg,
-              borderColor: `${band.dot}33`,
-            }
-      }
+      style={{
+        backgroundColor: band.bg,
+        color: band.fg,
+        border: isCritical ? 'none' : `1px solid ${band.fg}33`,
+      }}
     >
       <span
-        className={`h-1.5 w-1.5 rounded-full ${isCritical ? 'bg-white' : ''}`}
-        style={!isCritical ? { backgroundColor: band.dot } : {}}
+        className="h-1.5 w-1.5 rounded-full shrink-0"
+        style={{ backgroundColor: band.dot }}
+        aria-hidden="true"
       />
       <span>{band.label}</span>
+      {score !== undefined && score !== null && (
+        <span className="font-mono text-[10px] opacity-80">({score})</span>
+      )}
     </span>
   );
 }
@@ -116,7 +110,7 @@ export function PriorityBadge({ priority, score, className = '' }) {
  * On track: teal, Due soon: amber, Overdue: red
  */
 export function SlaBadge({ deadline, created, className = '' }) {
-  const { state, label, isOverdue } = getSlaStatus(deadline, created);
+  const { state, label } = getSlaStatus(deadline, created);
 
   let style = {
     bg: '#E3F6F4',
@@ -124,75 +118,70 @@ export function SlaBadge({ deadline, created, className = '' }) {
     border: '#A7E3DC',
   };
 
-  if (state === 'due-soon') {
-    style = {
-      bg: '#FFF5CC',
-      text: '#8A6A00',
-      border: '#F6D3A6',
-    };
-  } else if (state === 'overdue') {
+  if (state === 'overdue') {
     style = {
       bg: '#FDECEA',
       text: '#B42318',
       border: '#F7C1BB',
     };
+  } else if (state === 'due-soon') {
+    style = {
+      bg: '#FDF1E1',
+      text: '#9A5B0A',
+      border: '#F6D3A6',
+    };
   }
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-        isOverdue ? 'animate-pulse' : ''
-      } ${className}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${className}`}
       style={{
         backgroundColor: style.bg,
         color: style.text,
-        borderColor: style.border,
+        border: `1px solid ${style.border}`,
       }}
-      title={`SLA target: ${label}`}
     >
-      {isOverdue ? <AlertTriangle size={12} strokeWidth={2} /> : <Clock size={12} strokeWidth={2} />}
+      <Clock size={11} className="shrink-0" aria-hidden="true" />
       <span>{label}</span>
     </span>
   );
 }
 
-/**
- * HotspotBadge - Orange tinted pill with Flame icon
- */
-export function HotspotBadge({ className = '' }) {
+export function HotspotBadge({ count = 1, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full bg-danger-50 border border-danger-border px-2 py-0.5 text-[11px] font-bold text-danger ${className}`}
+      title={`${count} issues reported in this building recently`}
     >
-      <Flame size={12} className="text-orange-600" />
-      <span>Recurring hotspot</span>
+      <AlertTriangle size={11} className="shrink-0 text-danger" aria-hidden="true" />
+      <span>Hotspot ({count})</span>
     </span>
   );
 }
 
-/**
- * RoleBadge - Neutral pill (Student / Staff / Admin)
- */
 export function RoleBadge({ role = 'student', className = '' }) {
-  const roleDisplay = {
-    student: { label: 'Student', bg: 'bg-brand-50', text: 'text-brand-700', border: 'border-brand-200' },
-    staff: { label: 'Staff / Tech', bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
-    admin: { label: 'Admin', bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-  }[role.toLowerCase()] || { label: role, bg: 'bg-brand-50', text: 'text-brand-700', border: 'border-brand-200' };
+  const isAuthority = role === 'admin' || role === 'authority';
+  const isStaff = role === 'staff';
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${roleDisplay.bg} ${roleDisplay.text} ${roleDisplay.border} ${className}`}
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+        isAuthority
+          ? 'bg-purple-100 text-purple-800 border border-purple-200'
+          : isStaff
+          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+          : 'bg-stone-100 text-stone-700 border border-stone-200'
+      } ${className}`}
     >
-      {roleDisplay.label}
+      {role}
     </span>
   );
 }
 
-export default {
-  StatusBadge,
-  PriorityBadge,
-  SlaBadge,
-  HotspotBadge,
-  RoleBadge,
-};
+StatusBadge.StatusBadge = StatusBadge;
+StatusBadge.PriorityBadge = PriorityBadge;
+StatusBadge.SlaBadge = SlaBadge;
+StatusBadge.HotspotBadge = HotspotBadge;
+StatusBadge.RoleBadge = RoleBadge;
+
+export default StatusBadge;

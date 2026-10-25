@@ -1,11 +1,16 @@
-// components/ui/Toast.jsx - Toast notification provider and hook conforming to DESIGN.md §4.13
-import React, { createContext, useContext, useState, useCallback } from 'react';
+// components/ui/Toast.jsx - Toast notification provider conforming to DESIGN.md §4.13
+import React, { useState, useCallback } from 'react';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
+import { ToastContext } from './useToast';
 
-const ToastContext = createContext(null);
+export { useToast } from './useToast';
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const addToast = useCallback(({ type = 'info', title, message, duration = 5000 }) => {
     const id = Date.now() + Math.random().toString(36).substring(2, 6);
@@ -17,11 +22,7 @@ export function ToastProvider({ children }) {
       }, duration);
     }
     return id;
-  }, []);
-
-  const removeToast = useCallback((id) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+  }, [removeToast]);
 
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
@@ -37,17 +38,6 @@ export function ToastProvider({ children }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    return {
-      addToast: (t) => console.log('Toast:', t),
-      removeToast: () => {},
-    };
-  }
-  return context;
 }
 
 function ToastItem({ toast, onClose }) {

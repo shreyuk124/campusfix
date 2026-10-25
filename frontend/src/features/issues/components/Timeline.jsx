@@ -77,7 +77,7 @@ export function Timeline({ timeline = [], resolutionNote = null, className = '' 
           <span>Status & Activity History</span>
         </h3>
 
-        <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-2.5 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-line">
+        <div className="space-y-0">
           {timeline.map((entry, index) => {
             const isLast = index === timeline.length - 1;
             const actorRole = entry.actor?.role || 'student';
@@ -87,28 +87,33 @@ export function Timeline({ timeline = [], resolutionNote = null, className = '' 
               actorRole === 'student' ? 'A student' : entry.actor?.name || 'Campus Representative';
 
             return (
-              <div key={entry.id || index} className="relative group">
-                {/* Timeline Dot */}
-                <div className="absolute -left-6 sm:-left-8 top-1 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border-2 border-surface bg-surface-muted shadow-xs ring-4 ring-canvas">
-                  {getDotIcon(entry.toStatus)}
+              <div key={entry.id || index} className="flex items-start gap-3.5 sm:gap-4">
+                {/* Timeline Column: Dot Icon & Continuous Vertical Line */}
+                <div className="flex flex-col items-center shrink-0 self-stretch">
+                  <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border-2 border-surface bg-surface-muted shadow-xs ring-2 sm:ring-4 ring-canvas">
+                    {getDotIcon(entry.toStatus)}
+                  </div>
+                  {!isLast && (
+                    <div className="w-0.5 flex-1 bg-line my-1 min-h-[24px]" />
+                  )}
                 </div>
 
                 {/* Event Details */}
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
-                    <div className="flex items-center gap-1.5">
+                <div className={`flex-1 min-w-0 ${isLast ? 'pb-1' : 'pb-6'}`}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                       <span className="font-semibold text-ink text-sm">
                         {entry.toStatus ? `Status: ${entry.toStatus}` : 'Event recorded'}
                       </span>
                       <span className="text-muted">by</span>
-                      <span className="font-medium text-body bg-surface-muted px-1.5 py-0.5 rounded border border-line">
+                      <span className="font-medium text-body bg-surface-muted px-1.5 py-0.5 rounded border border-line text-[11px] sm:text-xs">
                         {actorDisplayName}
                       </span>
                     </div>
 
                     <time
                       dateTime={entry.timestamp}
-                      className="text-muted hover:text-ink cursor-default"
+                      className="text-muted hover:text-ink cursor-default text-[11px] sm:text-xs shrink-0"
                       title={formatAbsoluteDate(entry.timestamp)}
                     >
                       {formatRelativeTime(entry.timestamp)}
@@ -116,7 +121,7 @@ export function Timeline({ timeline = [], resolutionNote = null, className = '' 
                   </div>
 
                   {entry.note && (
-                    <p className="text-xs sm:text-sm text-body/90 bg-surface-muted/60 p-2.5 rounded-lg border border-line/60 mt-1 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-body/90 bg-surface-muted/60 p-2.5 rounded-lg border border-line/60 mt-2 leading-relaxed">
                       {entry.note}
                     </p>
                   )}

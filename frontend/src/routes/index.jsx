@@ -1,26 +1,23 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
+import { LandingPage } from '../features/landing';
+import { DashboardPage } from '../features/dashboard';
 import { FeedPage } from '../features/feed';
 import { MyIssuesPage, IssueDetailPage } from '../features/issues';
 import { ReportPage } from '../features/report';
 import { StaffPage } from '../features/staff';
 import { AdminPage } from '../features/admin';
-import { LoginPage, RegisterPage } from '../features/auth';
+import { SettingsPage } from '../features/settings';
 import ProtectedRoute from './ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
     path: '/',
+    element: <LandingPage />,
+  },
+  {
     element: <AppLayout />,
     children: [
-      {
-        index: true,
-        element: (
-          <ProtectedRoute>
-            <Navigate to="/feed" replace />
-          </ProtectedRoute>
-        ),
-      },
       {
         path: 'feed',
         element: (
@@ -32,7 +29,7 @@ export const router = createBrowserRouter([
       {
         path: 'my-issues',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <MyIssuesPage />
           </ProtectedRoute>
         ),
@@ -40,7 +37,7 @@ export const router = createBrowserRouter([
       {
         path: 'issues',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <MyIssuesPage />
           </ProtectedRoute>
         ),
@@ -56,8 +53,16 @@ export const router = createBrowserRouter([
       {
         path: 'report',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['student']}>
             <ReportPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DashboardPage />
           </ProtectedRoute>
         ),
       },
@@ -78,12 +83,20 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'settings',
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'login',
-        element: <LoginPage />,
+        element: <Navigate to="/" replace />,
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: <Navigate to="/" replace />,
       },
       {
         path: '*',
@@ -92,3 +105,5 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+export default router;

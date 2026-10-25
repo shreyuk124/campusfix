@@ -1,6 +1,6 @@
-// features/admin/AdminPage.jsx - Authority Dashboard reusing IssueCard with variant="admin"
-// Conforms to DESIGN.md §5.5 & PRD requirements
-import React, { useState, useEffect } from 'react';
+// features/admin/AdminPage.jsx - Authority Dashboard
+// Clean minimalist dashboard without SLA / internal penalty clutter
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Shield,
   Layers,
@@ -12,15 +12,20 @@ import {
   Square,
   UserCheck,
   RotateCcw,
+  Wrench,
+  Inbox,
 } from 'lucide-react';
 import { IssueCard, FilterBar } from '../issues/components';
 import { Button, Modal, useToast, EmptyState, IssueCardSkeleton } from '../../components/ui';
+import { useAuth } from '../auth/useAuth';
 import issuesService from '../issues/issuesService';
 import { CAMPUS_BUILDINGS, CATEGORIES } from '../../lib/constants';
 
 export default function AdminPage() {
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [issues, setIssues] = useState([]);
+  const [allLocalIssues, setAllLocalIssues] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedIssueIds, setSelectedIssueIds] = useState([]);
   const [activeTab, setActiveTab] = useState('triage'); // 'triage' | 'all'
@@ -29,8 +34,7 @@ export default function AdminPage() {
     building: 'all',
     category: 'all',
     status: 'all',
-    priority: 'all',
-    sort: 'highest-priority',
+    sort: 'newest',
   });
 
   // Quick Assign Modal
@@ -42,6 +46,9 @@ export default function AdminPage() {
   const fetchAdminIssues = async () => {
     setIsLoading(true);
     try {
+      const all = issuesService.getAllLocalIssues();
+      setAllLocalIssues(all);
+
       const res = await issuesService.getIssues({
         page: 1,
         limit: 50,
@@ -60,6 +67,15 @@ export default function AdminPage() {
   useEffect(() => {
     fetchAdminIssues();
   }, [activeTab, filters]);
+
+  // Dynamic live metric calculations
+  const stats = useMemo(() => {
+    const triage = allLocalIssues.filter((i) => i.status === 'Reported').length;
+    const inProgress = allLocalIssues.filter((i) => i.status === 'In Progress' || i.status === 'Assigned').length;
+    const resolved = allLocalIssues.filter((i) => i.status === 'Resolved' || i.status === 'Closed').length;
+    const totalActive = allLocalIssues.filter((i) => !['Resolved', 'Closed', 'Rejected'].includes(i.status)).length;
+    return { triage, inProgress, resolved, totalActive };
+  }, [allLocalIssues]);
 
   const handleSelectCard = (issue) => {
     setSelectedIssueIds((prev) =>
@@ -80,12 +96,6 @@ export default function AdminPage() {
       setAssignModalIssue(issue);
       setAssignedTeam(issue.assignedTeam !== 'Unassigned' ? issue.assignedTeam : 'Plumbing & Water Services');
       setAssignedStaff(issue.assignedStaff !== 'Unassigned' ? issue.assignedStaff : '');
-    } else if (action === 'priority') {
-      addToast({
-        type: 'info',
-        title: 'Priority Override',
-        message: `Opening priority override matrix for ${issue.referenceId}.`,
-      });
     }
   };
 
@@ -120,24 +130,26 @@ export default function AdminPage() {
     addToast({
       type: 'info',
       title: 'Demo Data Reset',
-      message: 'All campus issues restored to original mock seed state.',
+      message: 'All campus issues restored to original seed state.',
     });
   };
+
+  const displayName = user?.name ? `${user.name}'s Management Dashboard` : 'Authority Management Dashboard';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-surface p-5 sm:p-6 shadow-card">
         <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 border border-orange-200 px-2.5 py-0.5 text-xs font-semibold text-orange-700 mb-2">
-            <Shield size={13} className="text-orange-600" />
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-0.5 text-xs font-semibold text-brand-700 mb-2">
+            <Shield size={13} className="text-brand-600" />
             <span>Estate & Infrastructure Authority Portal</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">
-            Sarthak&apos;s Authority Management Dashboard
+            {displayName}
           </h1>
           <p className="mt-1 text-sm text-muted">
-            Triage new campus reports, dispatch maintenance crews, and monitor SLA compliance.
+            Triage new campus reports, dispatch maintenance crews, and track resolution progress.
           </p>
         </div>
 
@@ -152,37 +164,86 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      {/* Authority KPI Strip (DESIGN.md §500) */}
+      {/* Clean Operational KPI Strip (Zero SLA clutter) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-          <span className="text-xs font-semibold text-muted">Open Queue</span>
-          <div className="mt-1 flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-ink font-mono">{issues.length}</span>
-            <span className="text-xs text-brand-600 font-medium">tickets</span>
+        {/* 1. Triage Queue */}
+        <div
+          onClick={() => setActiveTab('triage')}
+          className={`rounded-xl border p-4 shadow-card cursor-pointer transition-all ${
+            activeTab === 'triage'
+              ? 'border-amber-400 bg-amber-50/50 ring-2 ring-amber-200'
+              : 'border-line bg-surface hover:border-amber-300'
+          }`}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">Awaiting Triage</span>
+            <Inbox size={15} className="text-amber-600" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-extrabold text-amber-600 font-mono">{stats.triage}</span>
+            <span className="text-xs text-amber-700 font-medium">needs assignment</span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-          <span className="text-xs font-semibold text-muted">Overdue SLA</span>
-          <div className="mt-1 flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-danger font-mono">1</span>
-            <span className="text-xs text-danger font-medium">+10 SLA penalty</span>
+        {/* 2. In Progress */}
+        <div
+          onClick={() => {
+            setActiveTab('all');
+            setFilters((f) => ({ ...f, status: 'In Progress' }));
+          }}
+          className="rounded-xl border border-line bg-surface p-4 shadow-card cursor-pointer hover:border-indigo-300 transition-all"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">In Progress</span>
+            <Wrench size={15} className="text-indigo-600" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-extrabold text-indigo-600 font-mono">{stats.inProgress}</span>
+            <span className="text-xs text-indigo-700 font-medium">active repairs</span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-          <span className="text-xs font-semibold text-muted">SLA Compliance</span>
-          <div className="mt-1 flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-teal-700 font-mono">92.4%</span>
-            <span className="text-xs text-teal-700 font-medium">On target</span>
+        {/* 3. Resolved */}
+        <div
+          onClick={() => {
+            setActiveTab('all');
+            setFilters((f) => ({ ...f, status: 'Resolved' }));
+          }}
+          className="rounded-xl border border-line bg-surface p-4 shadow-card cursor-pointer hover:border-teal-300 transition-all"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">Resolved</span>
+            <CheckCircle2 size={15} className="text-teal-600" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-extrabold text-teal-700 font-mono">{stats.resolved}</span>
+            <span className="text-xs text-teal-700 font-medium">completed</span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-surface p-4 shadow-card">
-          <span className="text-xs font-semibold text-muted">Avg. Fix Time</span>
-          <div className="mt-1 flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-ink font-mono">18.5h</span>
-            <span className="text-xs text-muted font-medium">Target &lt; 24h</span>
+        {/* 4. Total Active Workload */}
+        <div
+          onClick={() => {
+            setActiveTab('all');
+            setFilters((f) => ({ ...f, status: 'all' }));
+          }}
+          className="rounded-xl border border-line bg-surface p-4 shadow-card cursor-pointer hover:border-brand-300 transition-all"
+          role="button"
+          tabIndex={0}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted">Total Active</span>
+            <Layers size={15} className="text-brand-600" />
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-2xl font-extrabold text-ink font-mono">{stats.totalActive}</span>
+            <span className="text-xs text-brand-600 font-medium">open tickets</span>
           </div>
         </div>
       </div>
@@ -253,7 +314,7 @@ export default function AdminPage() {
           </button>
 
           <span>
-            Reusing shared <strong className="text-ink">IssueCard (variant=&quot;admin&quot;)</strong>
+            Showing <strong className="text-ink">{issues.length}</strong> issues
           </span>
         </div>
       )}

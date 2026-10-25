@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 
 // Central Axios client pointing to /api/v1 with proxy support
 const api = axios.create({

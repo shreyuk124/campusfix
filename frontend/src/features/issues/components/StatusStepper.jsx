@@ -1,13 +1,12 @@
-// features/issues/components/StatusStepper.jsx - Stepper conforming to DESIGN.md §4.6
+// features/issues/components/StatusStepper.jsx - Minimalist 4-stage resolution stepper
 import React from 'react';
-import { Check, CircleDot, AlertCircle, RotateCcw, XCircle, GitMerge } from 'lucide-react';
+import { Check, RotateCcw, XCircle, GitMerge } from 'lucide-react';
 
 const STANDARD_STEPS = [
   { key: 'Reported', label: 'Reported' },
   { key: 'Assigned', label: 'Assigned' },
   { key: 'In Progress', label: 'In Progress' },
   { key: 'Resolved', label: 'Resolved' },
-  { key: 'Closed', label: 'Closed' },
 ];
 
 export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
@@ -16,8 +15,12 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
   const isSpecialStatus = ['Reopened', 'Rejected', 'Merged'].includes(currentStatus);
 
   if (currentStatus === 'Reopened') {
-    currentIndex = 2; // Treat as In Progress index with special styling
+    currentIndex = 2; // Treat as In Progress index
+  } else if (currentStatus === 'Closed') {
+    currentIndex = 3; // Treat Closed as Resolved
   }
+
+  const isResolvedOrClosed = currentStatus === 'Resolved' || currentStatus === 'Closed';
 
   return (
     <div className={`rounded-xl border border-line bg-surface p-4 sm:p-6 shadow-card ${className}`}>
@@ -28,8 +31,8 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
           {currentStatus === 'Rejected' && <XCircle size={14} className="text-muted" />}
           {currentStatus === 'Merged' && <GitMerge size={14} className="text-purple-600" />}
           <span>
-            {currentStatus === 'Reopened' && 'This issue was reopened by student review and is back in active queue.'}
-            {currentStatus === 'Rejected' && 'This report was declined by administration.'}
+            {currentStatus === 'Reopened' && 'This issue was reopened and is back in the active queue.'}
+            {currentStatus === 'Rejected' && 'This report was declined by campus administration.'}
             {currentStatus === 'Merged' && 'This report was consolidated with an existing master ticket.'}
           </span>
         </div>
@@ -38,9 +41,8 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
       {/* Desktop Horizontal Stepper (≥640px) */}
       <div className="hidden sm:flex items-center justify-between relative">
         {STANDARD_STEPS.map((step, idx) => {
-          const isCompleted = currentIndex > idx;
-          const isCurrent = currentIndex === idx;
-          const isUpcoming = currentIndex < idx;
+          const isCompleted = currentIndex > idx || (isResolvedOrClosed && idx === 3);
+          const isCurrent = currentIndex === idx && !isResolvedOrClosed;
 
           return (
             <React.Fragment key={step.key}>
@@ -48,7 +50,7 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
               {idx > 0 && (
                 <div
                   className={`flex-1 h-0.5 mx-2 transition-colors duration-300 ${
-                    currentIndex >= idx ? 'bg-teal-600' : 'bg-line-strong'
+                    currentIndex >= idx || isResolvedOrClosed ? 'bg-teal-600' : 'bg-line-strong'
                   }`}
                 />
               )}
@@ -77,10 +79,10 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
                 {/* Step Label */}
                 <span
                   className={`mt-2 text-xs transition-colors ${
-                    isCurrent
+                    isCompleted
+                      ? 'font-medium text-teal-800'
+                      : isCurrent
                       ? 'font-bold text-brand-700'
-                      : isCompleted
-                      ? 'font-medium text-ink'
                       : 'text-muted'
                   }`}
                 >
@@ -95,9 +97,8 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
       {/* Mobile Vertical Stepper (<640px) */}
       <div className="flex sm:hidden flex-col space-y-3">
         {STANDARD_STEPS.map((step, idx) => {
-          const isCompleted = currentIndex > idx;
-          const isCurrent = currentIndex === idx;
-          const isUpcoming = currentIndex < idx;
+          const isCompleted = currentIndex > idx || (isResolvedOrClosed && idx === 3);
+          const isCurrent = currentIndex === idx && !isResolvedOrClosed;
 
           return (
             <div key={step.key} className="flex items-center gap-3">
@@ -119,10 +120,10 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
               <div className="flex-1 min-w-0">
                 <span
                   className={`text-xs ${
-                    isCurrent
+                    isCompleted
+                      ? 'font-medium text-teal-800'
+                      : isCurrent
                       ? 'font-bold text-brand-700'
-                      : isCompleted
-                      ? 'font-medium text-ink'
                       : 'text-muted'
                   }`}
                 >
@@ -131,6 +132,11 @@ export function StatusStepper({ currentStatus = 'Reported', className = '' }) {
                 {isCurrent && (
                   <span className="ml-2 text-[10px] uppercase tracking-wider font-semibold bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">
                     Current stage
+                  </span>
+                )}
+                {isCompleted && idx === 3 && (
+                  <span className="ml-2 text-[10px] uppercase tracking-wider font-semibold bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded">
+                    Resolved
                   </span>
                 )}
               </div>

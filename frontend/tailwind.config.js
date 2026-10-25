@@ -36,6 +36,7 @@ export default {
         line: {
           DEFAULT: '#E8E1D4',
           strong: '#D6CCB8',
+          skeleton: '#EFE8DA',
         },
         ink: '#162543',
         body: '#252F3F',

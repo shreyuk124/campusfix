@@ -1,9 +1,9 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import LocationPicker from './components/LocationPicker';
 import CategorySelector from './components/CategorySelector';
 import DuplicateChecker from './components/DuplicateChecker';
-import PhotoUploader, { MIN_PHOTOS } from './components/PhotoUploader';
+import PhotoUploader from './components/PhotoUploader';
 import ReportSuccess from './components/ReportSuccess';
 import Button from '../../components/ui/Button';
 import { MOCK_EXISTING_ISSUES } from './mock/mockDuplicates';
@@ -21,7 +21,7 @@ import { issuesApi } from '../../api/issues';
  *        -> Or click "None of these, report as new" to unlock Step 4
  *    - If NO matching issues exist:
  *        -> Step 4 unlocks automatically!
- * 4. Step 4: Specific Room/Floor + Mandatory Photos + Description
+ * 4. Step 4: Specific Room/Floor + Optional Photos + Description
  */
 export default function ReportPage() {
   // 1. High-level Location State
@@ -36,7 +36,7 @@ export default function ReportPage() {
   // 3. Category State
   const [category, setCategory] = useState('');
 
-  // 4. Mandatory Photos State
+  // 4. Optional Photos State
   const [photos, setPhotos] = useState([]);
 
   // 5. Description State
@@ -113,7 +113,6 @@ export default function ReportPage() {
     if (!location.building) newErrors.building = 'Please select a building.';
     if (!category) newErrors.category = 'Please select an issue category.';
     if (!specificLocation.trim()) newErrors.specificLocation = 'Please specify the exact room, lab, or floor.';
-    if (photos.length < MIN_PHOTOS) newErrors.photos = `At least ${MIN_PHOTOS} photo evidence is required.`;
     if (!description.trim()) newErrors.description = 'Please provide a description of the problem.';
 
     if (Object.keys(newErrors).length > 0) {
@@ -134,7 +133,7 @@ export default function ReportPage() {
       formData.append('locationText', specificLocation.trim());
       formData.append('description', description.trim());
 
-      // Step 2: Append 1 to 3 physical photographic evidence files
+      // Step 2: Append physical photographic evidence files if user provided any (optional, 0 to 3)
       photos.forEach((photoObj) => {
         if (photoObj.file) {
           formData.append('photos', photoObj.file);
@@ -193,7 +192,7 @@ export default function ReportPage() {
           Report an Issue
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Submit maintenance and safety complaints across campus with mandatory photo evidence.
+          Submit maintenance and safety complaints across campus to notify estate authorities.
         </p>
       </div>
 
@@ -281,7 +280,7 @@ export default function ReportPage() {
 
             <hr className="border-line" />
 
-            {/* 4B: Mandatory Photo Evidence */}
+            {/* 4B: Optional Photo Evidence */}
             <section>
               <PhotoUploader
                 photos={photos}

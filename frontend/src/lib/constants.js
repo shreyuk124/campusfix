@@ -86,13 +86,14 @@ export const PRIORITY_BANDS = [
 ];
 
 export const CATEGORIES = [
-  { key: 'Plumbing', label: 'Plumbing', icon: 'Droplets' },
-  { key: 'Electrical', label: 'Electrical', icon: 'Zap' },
-  { key: 'Cleanliness', label: 'Cleanliness', icon: 'Sparkles' },
-  { key: 'Internet', label: 'Internet / Wi-Fi', icon: 'Wifi' },
-  { key: 'Furniture', label: 'Furniture', icon: 'Armchair' },
-  { key: 'Safety', label: 'Safety Hazard', icon: 'ShieldAlert' },
-  { key: 'Other', label: 'Other', icon: 'CircleHelp' },
+  { key: 'Safety', label: 'Safety & Security', id: 'safety', icon: 'Safety' },
+  { key: 'Electrical', label: 'Electrical', id: 'electrical', icon: 'Electrical' },
+  { key: 'Plumbing', label: 'Water & Plumbing', id: 'plumbing', icon: 'Plumbing' },
+  { key: 'Internet', label: 'Wi-Fi & Network', id: 'wifi', icon: 'Wifi' },
+  { key: 'Equipment', label: 'Equipment & Labs', id: 'equipment', icon: 'Equipment' },
+  { key: 'Cleanliness', label: 'Sanitation & Hygiene', id: 'sanitation', icon: 'Sanitation' },
+  { key: 'Furniture', label: 'Furniture & Fixtures', id: 'furniture', icon: 'Furniture' },
+  { key: 'Other', label: 'Other', id: 'other', icon: 'Other' },
 ];
 
 // COEP Technological University - Campus Buildings & Facilities

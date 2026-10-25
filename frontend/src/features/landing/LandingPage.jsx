@@ -223,9 +223,9 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-tight">
-            Fixing Campus Facilities.{' '}
+            Report it. Track it.{' '}
             <span className="text-brand-500 underline decoration-brand-200 underline-offset-4">
-              Faster &amp; Transparently.
+              See it fixed.
             </span>
           </h1>
         </div>

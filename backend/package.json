@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "backend",
   "version": "1.0.0",
   "description": "CampusFix REST API Server - COEP SDS",
@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

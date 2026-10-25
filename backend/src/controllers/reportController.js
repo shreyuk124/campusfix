@@ -288,3 +288,75 @@ export const upvoteIssue = async (req, res, next) => {
     next(error);
   }
 };
+
+
+/**
+ * @desc    Update issue status & resolution notes (Authority & Maintenance workflow)
+ * @route   PATCH /api/v1/issues/:id/status
+ * @access  Staff / Admin
+ */
+export const updateIssueStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, resolutionNote } = req.body;
+
+    const validStatuses = [
+      'Reported',
+      'Assigned',
+      'In Progress',
+      'Resolved',
+      'Closed',
+      'Reopened',
+    ];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_STATUS',
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+        },
+      });
+    }
+
+    // Support lookup by MongoDB _id or human refId (e.g. CF-2026-0001)
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    const query = isObjectId ? { _id: id } : { refId: id };
+
+    const issue = await Issue.findOne(query);
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'ISSUE_NOT_FOUND',
+          message: 'Issue not found with the provided identifier.',
+        },
+      });
+    }
+
+    issue.status = status;
+    if (status === 'Resolved') {
+      issue.resolvedAt = new Date();
+    }
+    if (resolutionNote !== undefined) {
+      issue.resolutionNote = resolutionNote;
+    }
+
+    await issue.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Issue status successfully transitioned to '${status}'.`,
+      data: {
+        id: issue._id,
+        refId: issue.refId,
+        status: issue.status,
+        resolutionNote: issue.resolutionNote,
+        resolvedAt: issue.resolvedAt,
+        updatedAt: issue.updatedAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};

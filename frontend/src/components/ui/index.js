@@ -21,3 +21,15 @@ export { default as EmptyState } from './EmptyState';
 export { default as ErrorState } from './ErrorState';
 export { default as Modal } from './Modal';
 export { ToastProvider, useToast } from './Toast';
+export {
+  default as CategoryIcon,
+  SafetyIcon,
+  ElectricalIcon,
+  PlumbingIcon,
+  WifiIcon,
+  EquipmentIcon,
+  SanitationIcon,
+  FurnitureIcon,
+  OtherCategoryIcon,
+  CATEGORY_SVG_MAP,
+} from './CategoryIcon';

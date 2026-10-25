@@ -1,69 +1,70 @@
+import React from 'react';
 import {
-  ShieldAlert,
-  Zap,
-  Droplets,
-  Wifi,
-  Wrench,
-  Trash2,
-  Armchair,
-  HelpCircle,
-} from 'lucide-react';
+  SafetyIcon,
+  ElectricalIcon,
+  PlumbingIcon,
+  WifiIcon,
+  EquipmentIcon,
+  SanitationIcon,
+  FurnitureIcon,
+  OtherCategoryIcon,
+} from '../../../components/ui/CategoryIcon';
 
 /**
  * List of available issue categories on campus.
  * Each object holds:
  * - id: unique string value stored in state/database
  * - label: human-friendly text shown to the student
- * - icon: Lucide icon component to make selection visual
+ * - icon: dedicated fast SVG icon component
  * - description: short helper text explaining the category
  */
 export const CATEGORIES = [
   {
     id: 'safety',
     label: 'Safety & Security',
-    icon: ShieldAlert,
+    icon: SafetyIcon,
     description: 'Broken locks, hazards, security issues',
   },
   {
     id: 'electrical',
     label: 'Electrical',
-    icon: Zap,
+    icon: ElectricalIcon,
     description: 'Lights, fans, switches, wiring faults',
   },
   {
     id: 'plumbing',
     label: 'Water & Plumbing',
-    icon: Droplets,
+    icon: PlumbingIcon,
     description: 'Leaks, clogged washrooms, tap damage',
   },
   {
     id: 'wifi',
     label: 'Wi-Fi & Network',
-    icon: Wifi,
+    icon: WifiIcon,
     description: 'No signal, slow connection, router issues',
   },
   {
     id: 'equipment',
     label: 'Equipment & Labs',
-    icon: Wrench,
+    icon: EquipmentIcon,
     description: 'Projectors, lab tools, computers',
   },
   {
     id: 'sanitation',
     label: 'Sanitation & Hygiene',
-    icon: Trash2,
+    icon: SanitationIcon,
     description: 'Dustbins, cleanliness, pest issues',
   },
   {
     id: 'furniture',
     label: 'Furniture & Fixtures',
-    icon: Armchair,
+    icon: FurnitureIcon,
     description: 'Broken benches, desks, whiteboards',
   },
   {
     id: 'other',
     label: 'Other',
-    icon: HelpCircle,
+    icon: OtherCategoryIcon,
     description: 'Issues that do not fit above',
   },
 ];
@@ -107,9 +108,9 @@ export default function CategorySelector({ value, onChange, error }) {
                   : 'border-line bg-surface hover:border-line-strong hover:bg-surface-muted'
               }`}
             >
-              {/* Category Icon */}
+              {/* Category SVG Icon */}
               <div
-                className={`mb-2 flex h-8 w-8 items-center justify-center rounded-md ${
+                className={`mb-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors ${
                   isSelected
                     ? 'bg-brand-500 text-white'
                     : 'bg-canvas text-brand-600'

@@ -198,6 +198,71 @@ class IssuesService {
   /**
    * Confirm issue is fixed (Resolved -> Closed)
    */
+  /**
+   * Create a new issue report and persist to local storage
+   */
+  async createIssue({
+    title,
+    description,
+    category,
+    campus = 'south',
+    building,
+    location,
+    photos = [],
+    isAnonymous = false,
+  }) {
+    const issues = this.getAllLocalIssues();
+    const count = issues.length + 1;
+    const refId = `CF-2026-${String(count).padStart(4, '0')}`;
+    const newId = `cf-${Date.now()}`;
+
+    // Extract photo URLs or data URLs
+    const photoUrls = (photos || []).map((p) => {
+      if (typeof p === 'string') return p;
+      return p.previewUrl || '';
+    }).filter(Boolean);
+
+    const newIssue = {
+      id: newId,
+      referenceId: refId,
+      title: title || description.slice(0, 60).trim(),
+      description: description.trim(),
+      category: category || 'Other',
+      campus: campus || 'south',
+      building: building || 'Campus Center',
+      location: location || building || 'Main Campus',
+      status: 'Reported',
+      priority: 'Medium',
+      priorityScore: 50,
+      isSafetyRisk: false,
+      isHotspot: false,
+      affectedCount: 1,
+      hasJoined: false,
+      isReporter: true, // Marked as reporter so it appears in 'My Reports'
+      assignedTeam: 'Unassigned',
+      assignedStaff: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      photos: photoUrls,
+      timeline: [
+        {
+          id: `tl-${Date.now()}`,
+          type: 'status_change',
+          fromStatus: null,
+          toStatus: 'Reported',
+          actor: { name: isAnonymous ? 'Anonymous Student' : 'You (Reporter)', role: 'student' },
+          note: `Issue reported${photoUrls.length ? ` with ${photoUrls.length} photo attachment(s)` : ''}.`,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    // Prepend to top of list so it immediately appears first in Feed and My Reports
+    issues.unshift(newIssue);
+    this.saveIssues(issues);
+    return newIssue;
+  }
+
   async confirmFixed(id, note = 'Student confirmed repair is satisfactory.') {
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();

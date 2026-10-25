@@ -8,6 +8,7 @@ import ReportSuccess from './components/ReportSuccess';
 import Button from '../../components/ui/Button';
 import { MOCK_EXISTING_ISSUES } from './mock/mockDuplicates';
 import { issuesApi } from '../../api/issues';
+import issuesService from '../issues/issuesService';
 
 /**
  * ReportPage Component
@@ -88,9 +89,17 @@ export default function ReportPage() {
       console.warn('Upvote network fallback:', err.message);
     }
 
+    try {
+      if (existingIssue.id || existingIssue.referenceId) {
+        await issuesService.toggleJoinIssue(existingIssue.id || existingIssue.referenceId);
+      }
+    } catch (localErr) {
+      console.warn('Local toggle join fallback:', localErr);
+    }
+
     setSubmissionState({
       type: 'affected',
-      referenceId: existingIssue.refId || existingIssue.id,
+      referenceId: existingIssue.refId || existingIssue.referenceId || existingIssue.id,
       issueTitle: existingIssue.title,
     });
   };
@@ -123,10 +132,13 @@ export default function ReportPage() {
 
     setIsSubmitting(true);
 
+    let refId = null;
+    const finalTitle = description.slice(0, 60).trim();
+
     try {
       // Step 1: Construct FormData payload for binary multipart upload
       const formData = new FormData();
-      formData.append('title', description.slice(0, 60).trim());
+      formData.append('title', finalTitle);
       formData.append('campus', location.campus.toLowerCase());
       formData.append('building', location.building);
       formData.append('category', category);
@@ -140,27 +152,33 @@ export default function ReportPage() {
         }
       });
 
-      // Step 3: Execute POST request to backend API
+      // Step 3: Execute POST request to backend API (if online)
       const response = await issuesApi.create(formData);
-
-      setIsSubmitting(false);
-      setSubmissionState({
-        type: 'new',
-        referenceId: response.data?.refId || `CF-${Math.floor(10000 + Math.random() * 90000)}`,
-        issueTitle: response.data?.title || description.slice(0, 50),
-      });
+      if (response?.data?.refId) {
+        refId = response.data.refId;
+      }
     } catch (apiError) {
-      console.warn('Backend unavailable, using fallback ticket reference:', apiError);
-      setIsSubmitting(false);
-
-      // Resilient fallback so frontend demo never crashes during presentation
-      const fallbackRef = `CF-${Math.floor(10000 + Math.random() * 90000)}`;
-      setSubmissionState({
-        type: 'new',
-        referenceId: fallbackRef,
-        issueTitle: description.slice(0, 50) + (description.length > 50 ? '...' : ''),
-      });
+      console.warn('Backend unavailable, syncing report to local issues store:', apiError);
     }
+
+    // Always persist to local issuesService so the new report is immediately visible
+    // on Public Feed, "My Reports", and Admin Dashboard
+    const localIssue = await issuesService.createIssue({
+      title: finalTitle,
+      description: description.trim(),
+      category,
+      campus: location.campus,
+      building: location.building,
+      location: specificLocation.trim(),
+      photos,
+    });
+
+    setIsSubmitting(false);
+    setSubmissionState({
+      type: 'new',
+      referenceId: refId || localIssue.referenceId,
+      issueTitle: localIssue.title,
+    });
   };
 
   // If successfully submitted or upvoted, render confirmation screen

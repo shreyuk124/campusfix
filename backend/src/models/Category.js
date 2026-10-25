@@ -15,6 +15,14 @@ const categorySchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    icon: {
+      type: String,
+      default: 'Other',
+    },
+    description: {
+      type: String,
+      default: '',
+    },
     defaultTeam: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Team',
@@ -28,5 +36,5 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Category = mongoose.model('Category', categorySchema);
+export const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);
 export default Category;

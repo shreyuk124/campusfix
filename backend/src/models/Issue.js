@@ -76,6 +76,15 @@ const issueSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
+    assignedTeam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
+    },
   },
   { timestamps: true }
 );

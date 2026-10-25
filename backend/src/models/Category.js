@@ -4,14 +4,15 @@ const categorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, 'Category name is required'],
       unique: true,
       trim: true,
     },
     key: {
       type: String,
-      required: true,
+      required: [true, 'Category key is required'],
       unique: true,
+      lowercase: true,
       trim: true,
     },
     icon: {
@@ -21,6 +22,15 @@ const categorySchema = new mongoose.Schema(
     description: {
       type: String,
       default: '',
+    },
+    defaultTeam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }

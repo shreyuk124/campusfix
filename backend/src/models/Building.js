@@ -4,7 +4,7 @@ const buildingSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, 'Building name is required'],
       unique: true,
       trim: true,
     },
@@ -16,7 +16,16 @@ const buildingSchema = new mongoose.Schema(
     campus: {
       type: String,
       enum: ['north', 'south'],
-      default: 'north',
+      required: false,
+      default: null,
+    },
+    floors: {
+      type: Number,
+      required: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }

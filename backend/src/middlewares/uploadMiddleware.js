@@ -1,4 +1,4 @@
-﻿import multer from 'multer';
+import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -24,13 +24,16 @@ const storage = multer.diskStorage({
   },
 });
 
-// 3. Security Filter: Only allow JPG, PNG, WebP
+// 3. Security Filter: Allow all standard mobile image formats
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
+  const isImageMime = file.mimetype.startsWith('image/') || file.mimetype === 'application/octet-stream';
 
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  if (isImageMime || allowedExts.includes(ext)) {
     cb(null, true);
   } else {
+    console.warn(`[Multer] Rejected file "${file.originalname}" with mimetype "${file.mimetype}"`);
     const error = new Error(
       `File format "${file.mimetype}" is not supported. Please upload JPG, PNG, or WebP.`
     );
@@ -44,7 +47,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 25 * 1024 * 1024, // Generous 25MB limit for high-res mobile photos
     files: 3,                  // Maximum 3 photos
   },
 });
@@ -60,7 +63,7 @@ export const uploadIssuePhotos = (req, res, next) => {
           success: false,
           error: {
             code: 'FILE_TOO_LARGE',
-            message: 'One or more files exceed the maximum allowed size of 5MB.',
+            message: 'One or more files exceed the maximum allowed size of 25MB.',
           },
         });
       }

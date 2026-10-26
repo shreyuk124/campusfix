@@ -1,168 +1,79 @@
 import { useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, X, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
 
 /**
- * System Constraints
+ * System Limits for Photo Evidence
  */
 export const MIN_PHOTOS = 0;
 export const MAX_PHOTOS = 3;
-export const MAX_FILE_SIZE_MB = 10; // Generous 10MB limit for modern mobile camera sensors
+export const MAX_FILE_SIZE_MB = 25; // 25MB limit supported by backend
 export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-export const ACCEPTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-];
-
-/**
- * Automatically compress and normalize camera photos to standard JPG (< 2MB)
- * Prevents mobile camera photos (which are often 8-15MB) from getting rejected.
- */
-const compressImage = (file) => {
-  return new Promise((resolve) => {
-    // If not an image, resolve as-is
-    if (!file.type.startsWith('image/') && !file.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)) {
-      resolve(file);
-      return;
-    }
-
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-
-      // Max dimensions for mobile campus report photos
-      const MAX_WIDTH = 1920;
-      const MAX_HEIGHT = 1920;
-      let width = img.width;
-      let height = img.height;
-
-      if (width > height) {
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-      } else {
-        if (height > MAX_HEIGHT) {
-          width = Math.round((width * MAX_HEIGHT) / height);
-          height = MAX_HEIGHT;
-        }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          const cleanName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
-          const compressedFile = new File([blob], cleanName, {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          });
-          resolve(compressedFile);
-        },
-        'image/jpeg',
-        0.85
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(file); // Fallback to raw file if image loading fails
-    };
-
-    img.src = objectUrl;
-  });
-};
 
 /**
  * PhotoUploader Component
  * 
- * Props:
- * @param {Array} photos - Array of photo objects currently attached: [{ id, file, previewUrl }]
- * @param {function} onPhotosChange - Parent callback function to update photos array
- * @param {string} error - Optional validation error message from parent
+ * Clean, modular component providing:
+ * 1. "Take Photo" button -> Opens phone camera directly using capture="environment"
+ * 2. "Choose from Gallery" button -> Opens phone photo library
+ * 3. Instant thumbnail preview & removal
+ * 
+ * @param {Array} photos - Current array of photo objects: [{ id, file, previewUrl }]
+ * @param {Function} onPhotosChange - Notifies parent component when photos update
+ * @param {String} error - Validation error from parent
  */
 export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
-  // Reference for file picker (gallery/files)
-  const galleryInputRef = useRef(null);
-  // Reference for native camera capture
+  // Input ref dedicated to live camera capture
   const cameraInputRef = useRef(null);
 
-  // Local state to display file-validation errors
-  const [localError, setLocalError] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+  // Input ref dedicated to gallery photo selection
+  const galleryInputRef = useRef(null);
 
-  // Drag-over visual highlight state
-  const [isDragging, setIsDragging] = useState(false);
+  // Local state for file validation errors
+  const [localError, setLocalError] = useState('');
 
   /**
-   * Process newly selected or dropped files
+   * Process selected files from camera or gallery
    */
-  const handleFilesAdded = async (incomingFiles) => {
+  const handleFilesAdded = (incomingFileList) => {
     setLocalError('');
 
-    if (!incomingFiles || incomingFiles.length === 0) return;
+    if (!incomingFileList || incomingFileList.length === 0) return;
 
-    // Check available slots
-    const availableSlots = MAX_PHOTOS - photos.length;
-    if (availableSlots <= 0) {
-      setLocalError(`You have already attached the maximum of ${MAX_PHOTOS} photos.`);
+    // Check how many slots are remaining
+    const remainingSlots = MAX_PHOTOS - photos.length;
+    if (remainingSlots <= 0) {
+      setLocalError(`You can attach a maximum of ${MAX_PHOTOS} photos.`);
       return;
     }
 
-    // Convert FileList to array and take only what fits in available slots
-    const filesToProcess = Array.from(incomingFiles).slice(0, availableSlots);
-    const validNewPhotos = [];
-    setIsProcessing(true);
+    // Process files within available slots
+    const filesToProcess = Array.from(incomingFileList).slice(0, remainingSlots);
+    const newValidPhotos = [];
 
-    try {
-      for (const file of filesToProcess) {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
-          setLocalError(`"${file.name}" is too large (${sizeInMB}MB). Maximum file size is ${MAX_FILE_SIZE_MB}MB.`);
-          setIsProcessing(false);
-          return;
-        }
-
-        try {
-          // Compress and normalize to JPEG
-          const processedFile = await compressImage(file);
-
-          validNewPhotos.push({
-            id: `${processedFile.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            file: processedFile,
-            previewUrl: URL.createObjectURL(processedFile),
-          });
-        } catch (err) {
-          console.warn('Compression error, using raw file:', err);
-          validNewPhotos.push({
-            id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            file,
-            previewUrl: URL.createObjectURL(file),
-          });
-        }
+    for (const file of filesToProcess) {
+      // Check file size (< 25MB)
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        const sizeInMB = (file.size / (1024 * 1024)).toFixed(1);
+        setLocalError(`"${file.name}" is ${sizeInMB}MB. Maximum allowed is ${MAX_FILE_SIZE_MB}MB.`);
+        return;
       }
 
-      // Notify parent of updated photos array
-      onPhotosChange([...photos, ...validNewPhotos]);
-    } finally {
-      setIsProcessing(false);
-      // Reset file input values
-      if (galleryInputRef.current) galleryInputRef.current.value = '';
-      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      // Generate instant preview thumbnail
+      const previewUrl = URL.createObjectURL(file);
+
+      newValidPhotos.push({
+        id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        file,
+        previewUrl,
+      });
     }
+
+    // Update parent list
+    onPhotosChange([...photos, ...newValidPhotos]);
+
+    // Reset input elements so taking another picture works every time
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   /**
@@ -171,69 +82,44 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
   const handleRemovePhoto = (indexToRemove) => {
     setLocalError('');
 
-    // Revoke blob URL to free up memory
+    // Free memory of the preview URL
     if (photos[indexToRemove]?.previewUrl) {
       URL.revokeObjectURL(photos[indexToRemove].previewUrl);
     }
 
-    const updatedPhotos = photos.filter((_, idx) => idx !== indexToRemove);
-    onPhotosChange(updatedPhotos);
+    const updated = photos.filter((_, idx) => idx !== indexToRemove);
+    onPhotosChange(updated);
   };
 
   /**
-   * Trigger native camera directly
+   * Open the Camera directly
    */
-  const handleCameraClick = (e) => {
+  const handleTakePhoto = (e) => {
     e.stopPropagation();
     if (photos.length >= MAX_PHOTOS) {
       setLocalError(`Maximum ${MAX_PHOTOS} photos allowed.`);
       return;
     }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.click();
-    }
+    cameraInputRef.current?.click();
   };
 
   /**
-   * Trigger gallery / file picker
+   * Open the Gallery directly
    */
-  const handleGalleryClick = (e) => {
+  const handleChooseGallery = (e) => {
     e.stopPropagation();
     if (photos.length >= MAX_PHOTOS) {
       setLocalError(`Maximum ${MAX_PHOTOS} photos allowed.`);
       return;
     }
-    if (galleryInputRef.current) {
-      galleryInputRef.current.click();
-    }
-  };
-
-  /**
-   * Drag & Drop event handlers
-   */
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFilesAdded(e.dataTransfer.files);
-    }
+    galleryInputRef.current?.click();
   };
 
   const activeError = error || localError;
 
   return (
     <div className="w-full space-y-3">
-      {/* Header with optional indicator and counter badge */}
+      {/* Header and Photo Counter */}
       <div className="flex items-center justify-between">
         <div>
           <label className="block text-sm font-semibold text-ink">
@@ -244,7 +130,6 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
           </p>
         </div>
 
-        {/* Counter Badge */}
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
             photos.length > 0
@@ -256,53 +141,38 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
         </span>
       </div>
 
-      {/* Hidden Native Input for Gallery / File Picker */}
-      <input
-        ref={galleryInputRef}
-        type="file"
-        multiple
-        accept="image/*"
-        onChange={(e) => handleFilesAdded(e.target.files)}
-        className="sr-only"
-        aria-hidden="true"
-        tabIndex={-1}
-      />
-
-      {/* Hidden Native Input for Direct Mobile Camera Capture */}
+      {/* 1. Dedicated Camera Input (capture="environment" forces camera on mobile) */}
       <input
         ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
         onChange={(e) => handleFilesAdded(e.target.files)}
-        className="sr-only"
+        className="hidden"
         aria-hidden="true"
         tabIndex={-1}
       />
 
-      {/* Custom Upload Area */}
+      {/* 2. Dedicated Gallery Input (standard file picker) */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={(e) => handleFilesAdded(e.target.files)}
+        className="hidden"
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+
+      {/* Upload Buttons Box */}
       {photos.length < MAX_PHOTOS && (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition-all duration-150 ${
-            isDragging
-              ? 'border-brand-500 bg-brand-50/70 scale-[1.01]'
-              : 'border-line-strong bg-surface hover:border-brand-500 hover:bg-surface-muted'
-          }`}
-        >
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-line-strong bg-surface p-5 text-center transition-all duration-150 hover:border-brand-500 hover:bg-surface-muted">
           <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-            {isProcessing ? (
-              <Loader2 size={22} className="animate-spin text-brand-600" />
-            ) : (
-              <Camera size={22} />
-            )}
+            <Camera size={22} />
           </div>
 
-          <p className="text-sm font-semibold text-ink">
-            {isProcessing ? 'Optimizing photo...' : 'Add Photo Evidence'}
-          </p>
+          <p className="text-sm font-semibold text-ink">Add Photo Evidence</p>
           <p className="mt-0.5 text-xs text-muted">
             Up to {MAX_PHOTOS} photos • Max {MAX_FILE_SIZE_MB}MB each
           </p>
@@ -311,9 +181,8 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2.5">
             <button
               type="button"
-              onClick={handleCameraClick}
-              disabled={isProcessing}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+              onClick={handleTakePhoto}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 cursor-pointer"
             >
               <Camera size={15} />
               Take Photo
@@ -321,9 +190,8 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
 
             <button
               type="button"
-              onClick={handleGalleryClick}
-              disabled={isProcessing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:bg-canvas hover:border-brand-400 active:scale-95 disabled:opacity-50"
+              onClick={handleChooseGallery}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:bg-canvas hover:border-brand-400 active:scale-95 cursor-pointer"
             >
               <ImageIcon size={15} className="text-brand-600" />
               Choose from Gallery
@@ -346,12 +214,10 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
                 className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
 
-              {/* Photo Index Tag */}
               <span className="absolute bottom-1.5 left-1.5 rounded bg-ink/75 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                 Photo {index + 1}
               </span>
 
-              {/* Remove Photo Button */}
               <button
                 type="button"
                 onClick={(e) => {
@@ -359,7 +225,7 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
                   handleRemovePhoto(index);
                 }}
                 aria-label={`Remove photo ${index + 1}`}
-                className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-white transition-colors hover:bg-danger focus:outline-none"
+                className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-white transition-colors hover:bg-danger focus:outline-none cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -368,7 +234,7 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
         </div>
       )}
 
-      {/* Active Validation or Size Error Message */}
+      {/* Validation Message */}
       {activeError && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-danger" role="alert">
           <AlertCircle size={14} className="shrink-0" />

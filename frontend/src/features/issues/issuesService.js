@@ -1,7 +1,67 @@
-// features/issues/issuesService.js - In-memory and localStorage issue management service
+// features/issues/issuesService.js - Live API & LocalStorage synchronization service
 import { INITIAL_ISSUES } from './mockIssuesData';
+import { issuesApi } from '../../api/issues';
 
 const STORAGE_KEY = 'campusfix_coep_issues_v2';
+
+/**
+ * Normalizes an API issue document into a consistent frontend issue shape.
+ */
+function normalizeIssue(doc) {
+  if (!doc) return null;
+  const id = String(doc._id || doc.id || doc.refId);
+  const refId = doc.refId || doc.referenceId || `CF-${id.slice(-5)}`;
+
+  return {
+    id,
+    referenceId: refId,
+    title: doc.title || doc.description?.slice(0, 60) || 'Untitled Issue',
+    description: doc.description || '',
+    category:
+      doc.category?.name ||
+      doc.category?.label ||
+      (typeof doc.category === 'string' ? doc.category : 'General'),
+    campus: doc.campus || doc.building?.campus || 'north',
+    building:
+      doc.building?.name ||
+      (typeof doc.building === 'string' ? doc.building : 'Campus Building'),
+    location:
+      doc.locationText ||
+      doc.location ||
+      doc.building?.name ||
+      'Campus Location',
+    status: doc.status || 'Reported',
+    affectedCount: doc.reportCount ?? doc.affectedCount ?? 1,
+    hasJoined: Boolean(doc.hasJoined),
+    isReporter: Boolean(doc.isReporter),
+    isHotspot: Boolean(doc.isHotspot),
+    assignedTeam:
+      doc.assignedTeam?.name ||
+      (typeof doc.assignedTeam === 'string' && doc.assignedTeam !== ''
+        ? doc.assignedTeam
+        : 'Unassigned'),
+    assignedStaff: doc.assignedStaff || '',
+    resolutionNote: doc.resolutionNote || '',
+    resolvedAt: doc.resolvedAt || null,
+    closedAt: doc.closedAt || null,
+    createdAt: doc.createdAt || new Date().toISOString(),
+    updatedAt: doc.updatedAt || doc.createdAt || new Date().toISOString(),
+    photos: Array.isArray(doc.photos) ? doc.photos : [],
+    timeline: Array.isArray(doc.timeline)
+      ? doc.timeline
+      : [
+          {
+            id: `tl-${id}`,
+            type: 'status_change',
+            fromStatus: null,
+            toStatus: doc.status || 'Reported',
+            actor: { name: 'Campus Reporter', role: 'student' },
+            note: 'Reported on CampusFix.',
+            timestamp: doc.createdAt || new Date().toISOString(),
+          },
+        ],
+  };
+}
 
 class IssuesService {
   constructor() {
@@ -40,6 +100,67 @@ class IssuesService {
   }
 
   /**
+   * Synchronizes latest issues from MongoDB Atlas backend into localStorage.
+   */
+  async syncWithBackend() {
+    try {
+      const res = await issuesApi.getAll({ limit: 100 });
+      const apiIssues = Array.isArray(res?.data)
+        ? res.data
+        : Array.isArray(res)
+        ? res
+        : [];
+
+      if (apiIssues && apiIssues.length > 0) {
+        const local = this.getAllLocalIssues();
+        const localMap = new Map();
+        local.forEach((item) => {
+          if (item.id) localMap.set(String(item.id).toLowerCase(), item);
+          if (item.referenceId)
+            localMap.set(String(item.referenceId).toLowerCase(), item);
+        });
+
+        const normalized = apiIssues.map((doc) => {
+          const norm = normalizeIssue(doc);
+          const existing =
+            localMap.get(norm.id.toLowerCase()) ||
+            localMap.get(norm.referenceId.toLowerCase());
+          if (existing) {
+            norm.hasJoined = existing.hasJoined || false;
+            norm.isReporter = existing.isReporter || false;
+            if (existing.assignedStaff)
+              norm.assignedStaff = existing.assignedStaff;
+            if (existing.timeline && existing.timeline.length > 1) {
+              norm.timeline = existing.timeline;
+            }
+          }
+          return norm;
+        });
+
+        // Retain any purely mock items that are not yet on backend
+        const backendIds = new Set(
+          normalized.map((n) => n.id.toLowerCase())
+        );
+        const backendRefIds = new Set(
+          normalized.map((n) => n.referenceId.toLowerCase())
+        );
+        const extraLocal = local.filter(
+          (l) =>
+            !backendIds.has(String(l.id).toLowerCase()) &&
+            !backendRefIds.has(String(l.referenceId || '').toLowerCase())
+        );
+
+        const merged = [...normalized, ...extraLocal];
+        this.saveIssues(merged);
+        return merged;
+      }
+    } catch (err) {
+      console.warn('[issuesService] Backend sync notice:', err.message);
+    }
+    return this.getAllLocalIssues();
+  }
+
+  /**
    * Filter, search, sort and paginate issues
    */
   async getIssues({
@@ -49,10 +170,9 @@ class IssuesService {
     building = 'all',
     category = 'all',
     status = 'all',
-    priority = 'all',
     sort = 'newest',
     tab = 'all', // 'all', 'my-active', 'my-resolved', 'my-closed'
-    simulateDelay = 250,
+    simulateDelay = 100,
     forceError = false,
   } = {}) {
     if (simulateDelay) {
@@ -63,16 +183,27 @@ class IssuesService {
       throw new Error('Simulated network error while fetching issues');
     }
 
-    let items = this.getAllLocalIssues();
+    // Sync from live MongoDB Atlas backend
+    let items = await this.syncWithBackend();
 
     // Tab filter for My Issues
     if (tab === 'my-active') {
       items = items.filter(
-        (item) => (item.isReporter || item.hasJoined) && ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(item.status)
+        (item) =>
+          (item.isReporter || item.hasJoined) &&
+          ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(
+            item.status
+          )
       );
-    } else if (tab === 'my-resolved' || tab === 'my-closed' || tab === 'my-awaiting') {
+    } else if (
+      tab === 'my-resolved' ||
+      tab === 'my-closed' ||
+      tab === 'my-awaiting'
+    ) {
       items = items.filter(
-        (item) => (item.isReporter || item.hasJoined) && ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
+        (item) =>
+          (item.isReporter || item.hasJoined) &&
+          ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
       );
     }
 
@@ -81,11 +212,11 @@ class IssuesService {
       const q = search.toLowerCase().trim();
       items = items.filter(
         (item) =>
-          item.title.toLowerCase().includes(q) ||
-          item.referenceId.toLowerCase().includes(q) ||
-          item.location.toLowerCase().includes(q) ||
-          item.building.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q)
+          item.title?.toLowerCase().includes(q) ||
+          item.referenceId?.toLowerCase().includes(q) ||
+          item.location?.toLowerCase().includes(q) ||
+          item.building?.toLowerCase().includes(q) ||
+          item.description?.toLowerCase().includes(q)
       );
     }
 
@@ -97,38 +228,21 @@ class IssuesService {
     // Category filter
     if (category && category !== 'all') {
       items = items.filter(
-        (item) => item.category.toLowerCase() === category.toLowerCase()
+        (item) => item.category?.toLowerCase() === category.toLowerCase()
       );
     }
 
     // Status filter
     if (status && status !== 'all') {
-      items = items.filter((item) => item.status.toLowerCase() === status.toLowerCase());
-    }
-
-    // Priority filter
-    if (priority && priority !== 'all') {
-      items = items.filter((item) => item.priority.toLowerCase() === priority.toLowerCase());
+      items = items.filter(
+        (item) => item.status?.toLowerCase() === status.toLowerCase()
+      );
     }
 
     // Sorting
     items.sort((a, b) => {
       if (sort === 'most-affected') {
         return (b.affectedCount || 0) - (a.affectedCount || 0);
-      }
-      if (sort === 'highest-priority') {
-        if (b.priorityScore !== undefined && a.priorityScore !== undefined) {
-          return (b.priorityScore || 0) - (a.priorityScore || 0);
-        }
-        const order = { critical: 4, high: 3, medium: 2, low: 1 };
-        const pA = order[String(a.priority || '').toLowerCase()] || 0;
-        const pB = order[String(b.priority || '').toLowerCase()] || 0;
-        return pB - pA;
-      }
-      if (sort === 'due-soon') {
-        const timeA = a.slaDeadline ? new Date(a.slaDeadline).getTime() : Infinity;
-        const timeB = b.slaDeadline ? new Date(b.slaDeadline).getTime() : Infinity;
-        return timeA - timeB;
       }
       if (sort === 'oldest') {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -153,16 +267,42 @@ class IssuesService {
   /**
    * Fetch single issue by ID or reference ID
    */
-  async getById(id, { simulateDelay = 200 } = {}) {
+  async getById(id, { simulateDelay = 100 } = {}) {
     if (simulateDelay) {
       await new Promise((res) => setTimeout(res, simulateDelay));
     }
+
+    // Try fetching fresh data from backend API first
+    try {
+      const res = await issuesApi.getById(id);
+      const apiDoc = res?.data || res;
+      if (apiDoc && (apiDoc._id || apiDoc.refId)) {
+        const normalized = normalizeIssue(apiDoc);
+        const issues = this.getAllLocalIssues();
+        const cleanId = String(id).toLowerCase().replace('#', '');
+        const existing = issues.find(
+          (i) =>
+            i.id.toLowerCase() === cleanId ||
+            i.referenceId?.toLowerCase() === cleanId
+        );
+        if (existing) {
+          normalized.hasJoined = existing.hasJoined || false;
+          normalized.isReporter = existing.isReporter || false;
+          if (existing.assignedStaff)
+            normalized.assignedStaff = existing.assignedStaff;
+        }
+        return normalized;
+      }
+    } catch {
+      // Fallback to local storage
+    }
+
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase().replace('#', '');
     const found = issues.find(
       (item) =>
         item.id.toLowerCase() === cleanId ||
-        item.referenceId.toLowerCase() === cleanId
+        item.referenceId?.toLowerCase() === cleanId
     );
     if (!found) {
       throw new Error(`Issue not found with ID ${id}`);
@@ -174,30 +314,36 @@ class IssuesService {
    * Toggle "+1 I am affected too"
    */
   async toggleJoinIssue(id) {
+    // 1. Call real backend API to increment report count in MongoDB Atlas
+    try {
+      await issuesApi.upvote(id);
+    } catch (e) {
+      console.warn('[issuesService] Backend upvote notice:', e.message);
+    }
+
+    // 2. Update local state
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
-      (item) => item.id.toLowerCase() === cleanId || item.referenceId.toLowerCase() === cleanId
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
     );
     if (index === -1) throw new Error('Issue not found');
 
     const issue = { ...issues[index] };
     const nowJoined = !issue.hasJoined;
     issue.hasJoined = nowJoined;
-    issue.affectedCount = Math.max(1, (issue.affectedCount || 1) + (nowJoined ? 1 : -1));
+    issue.affectedCount = Math.max(
+      1,
+      (issue.affectedCount || 1) + (nowJoined ? 1 : -1)
+    );
 
-    // Update score recalculation factor slightly
-    if (issue.priorityScore) {
-      issue.priorityScore = Math.min(99, Math.max(10, issue.priorityScore + (nowJoined ? 2 : -2)));
-    }
     issues[index] = issue;
     this.saveIssues(issues);
     return issue;
   }
 
-  /**
-   * Confirm issue is fixed (Resolved -> Closed)
-   */
   /**
    * Create a new issue report and persist to local storage
    */
@@ -216,11 +362,13 @@ class IssuesService {
     const refId = `CF-2026-${String(count).padStart(4, '0')}`;
     const newId = `cf-${Date.now()}`;
 
-    // Extract photo URLs or data URLs
-    const photoUrls = (photos || []).map((p) => {
-      if (typeof p === 'string') return p;
-      return p.previewUrl || '';
-    }).filter(Boolean);
+    // Extract photo URLs
+    const photoUrls = (photos || [])
+      .map((p) => {
+        if (typeof p === 'string') return p;
+        return p.previewUrl || '';
+      })
+      .filter(Boolean);
 
     const newIssue = {
       id: newId,
@@ -232,15 +380,13 @@ class IssuesService {
       building: building || 'Campus Center',
       location: location || building || 'Main Campus',
       status: 'Reported',
-      priority: 'Medium',
-      priorityScore: 50,
       isSafetyRisk: false,
       isHotspot: false,
       affectedCount: 1,
       hasJoined: false,
-      isReporter: true, // Marked as reporter so it appears in 'My Reports'
+      isReporter: true,
       assignedTeam: 'Unassigned',
-      assignedStaff: null,
+      assignedStaff: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       photos: photoUrls,
@@ -250,24 +396,39 @@ class IssuesService {
           type: 'status_change',
           fromStatus: null,
           toStatus: 'Reported',
-          actor: { name: isAnonymous ? 'Anonymous Student' : 'You (Reporter)', role: 'student' },
-          note: `Issue reported${photoUrls.length ? ` with ${photoUrls.length} photo attachment(s)` : ''}.`,
+          actor: {
+            name: isAnonymous ? 'Anonymous Student' : 'You (Reporter)',
+            role: 'student',
+          },
+          note: `Issue reported${
+            photoUrls.length ? ` with ${photoUrls.length} photo attachment(s)` : ''
+          }.`,
           timestamp: new Date().toISOString(),
         },
       ],
     };
 
-    // Prepend to top of list so it immediately appears first in Feed and My Reports
     issues.unshift(newIssue);
     this.saveIssues(issues);
     return newIssue;
   }
 
+  /**
+   * Confirm issue is fixed (Resolved -> Closed)
+   */
   async confirmFixed(id, note = 'Student confirmed repair is satisfactory.') {
+    try {
+      await issuesApi.updateStatus(id, 'Closed', note);
+    } catch (e) {
+      console.warn('[issuesService] Backend close notice:', e.message);
+    }
+
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
-      (item) => item.id.toLowerCase() === cleanId || item.referenceId.toLowerCase() === cleanId
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
     );
     if (index === -1) throw new Error('Issue not found');
 
@@ -299,18 +460,24 @@ class IssuesService {
       throw new Error('A reason is required to reopen an issue.');
     }
 
+    try {
+      await issuesApi.updateStatus(id, 'Reopened', reason);
+    } catch (e) {
+      console.warn('[issuesService] Backend reopen notice:', e.message);
+    }
+
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
-      (item) => item.id.toLowerCase() === cleanId || item.referenceId.toLowerCase() === cleanId
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
     );
     if (index === -1) throw new Error('Issue not found');
 
     const issue = { ...issues[index] };
     issue.status = 'Reopened';
     issue.updatedAt = new Date().toISOString();
-    // Prioritize reopened issues (+10 points per PRD rules)
-    issue.priorityScore = Math.min(99, (issue.priorityScore || 50) + 10);
 
     const timelineEntry = {
       id: `tl-${Date.now()}`,
@@ -329,15 +496,27 @@ class IssuesService {
   }
 
   /**
-   * Admin / Staff: Update status
+   * Admin / Staff: Update status and persist to MongoDB Atlas
    */
   async updateStatus(id, newStatus, note = '', staffName = 'Staff Member') {
+    // Step 1: Update in real MongoDB Atlas backend
+    try {
+      await issuesApi.updateStatus(id, newStatus, note);
+    } catch (apiErr) {
+      console.warn('[issuesService] Backend status update notice:', apiErr.message);
+    }
+
+    // Step 2: Update local cache so UI reacts immediately
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
-      (item) => item.id.toLowerCase() === cleanId || item.referenceId.toLowerCase() === cleanId
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
     );
-    if (index === -1) throw new Error('Issue not found');
+    if (index === -1) {
+      return { id, status: newStatus, resolutionNote: note };
+    }
 
     const issue = { ...issues[index] };
     const oldStatus = issue.status;
@@ -366,21 +545,32 @@ class IssuesService {
   }
 
   /**
-   * Admin: Assign to team & set priority
+   * Admin: Assign to team and persist to MongoDB Atlas
    */
-  async assignIssue(id, team, staffName = '', priorityOverride = null) {
+  async assignIssue(id, team, staffName = '') {
+    // Step 1: Update in real MongoDB Atlas backend
+    try {
+      await issuesApi.assignTeam(id, team, staffName);
+    } catch (apiErr) {
+      console.warn('[issuesService] Backend assign notice:', apiErr.message);
+    }
+
+    // Step 2: Update local cache so UI reacts immediately
     const issues = this.getAllLocalIssues();
     const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
-      (item) => item.id.toLowerCase() === cleanId || item.referenceId.toLowerCase() === cleanId
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
     );
-    if (index === -1) throw new Error('Issue not found');
+    if (index === -1) {
+      return { id, assignedTeam: team, status: 'Assigned' };
+    }
 
     const issue = { ...issues[index] };
     issue.assignedTeam = team;
     if (staffName) issue.assignedStaff = staffName;
     if (issue.status === 'Reported') issue.status = 'Assigned';
-    if (priorityOverride) issue.priority = priorityOverride;
     issue.updatedAt = new Date().toISOString();
 
     const timelineEntry = {

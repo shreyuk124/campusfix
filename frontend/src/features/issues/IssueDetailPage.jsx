@@ -128,8 +128,7 @@ export default function IssueDetailPage() {
         issue.id,
         assignedTeam,
         assignedStaff || 'Assigned Staff',
-        issue.priority
-      );
+        );
       setIssue(updated);
       setIsAssignModalOpen(false);
       addToast({

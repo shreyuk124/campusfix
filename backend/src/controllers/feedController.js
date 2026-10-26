@@ -16,6 +16,7 @@
 
 import mongoose from 'mongoose';
 import { Issue } from '../models/Issue.js';
+import { Team } from '../models/Team.js';
 import {
   parsePagination,
   parseSort,
@@ -78,6 +79,10 @@ export function sanitizePublicIssue(doc) {
   }
 
   // Remove internal/private metadata if any
+  if (issue.assignedTeam && typeof issue.assignedTeam === 'object' && issue.assignedTeam.name) {
+    issue.assignedTeam = issue.assignedTeam.name;
+  }
+
   delete issue.__v;
   delete issue.password;
 
@@ -118,7 +123,8 @@ export function createFeedController(deps = {}) {
 
       if (typeof query.populate === 'function') {
         if (mongoose.models.Building) query = query.populate('building', 'name campus');
-        if (mongoose.models.Category) query = query.populate('category', 'label baseSeverity icon');
+        if (mongoose.models.Category) query = query.populate('category', 'name label baseSeverity icon');
+        if (mongoose.models.Team) query = query.populate('assignedTeam', 'name');
         if (mongoose.models.User) query = query.populate('createdBy', 'role');
       }
 
@@ -176,7 +182,8 @@ export function createFeedController(deps = {}) {
       let query = Model.findOne(queryCriteria);
       if (typeof query.populate === 'function') {
         if (mongoose.models.Building) query = query.populate('building', 'name campus');
-        if (mongoose.models.Category) query = query.populate('category', 'label baseSeverity icon');
+        if (mongoose.models.Category) query = query.populate('category', 'name label baseSeverity icon');
+        if (mongoose.models.Team) query = query.populate('assignedTeam', 'name');
         if (mongoose.models.User) query = query.populate('createdBy', 'role');
       }
 
@@ -253,7 +260,8 @@ export function createFeedController(deps = {}) {
 
       if (typeof query.populate === 'function') {
         if (mongoose.models.Building) query = query.populate('building', 'name campus');
-        if (mongoose.models.Category) query = query.populate('category', 'label icon');
+        if (mongoose.models.Category) query = query.populate('category', 'name label icon');
+        if (mongoose.models.Team) query = query.populate('assignedTeam', 'name');
       }
 
       const [rawIssues, total] = await Promise.all([

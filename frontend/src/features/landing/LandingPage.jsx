@@ -157,7 +157,12 @@ export default function LandingPage() {
       }, 700);
     } catch (err) {
       console.error('Sign in error:', err);
-      setServerError(err.message || 'Invalid university credentials or unauthorized role.');
+      const message =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        err.message ||
+        'Invalid university credentials or unauthorized role.';
+      setServerError(message);
     }
   };
 
@@ -183,7 +188,12 @@ export default function LandingPage() {
       }, 700);
     } catch (err) {
       console.error('Registration error:', err);
-      setServerError(err.message || 'Registration failed. This email may already be in use.');
+      const message =
+        err.response?.data?.error?.message ||
+        err.response?.data?.message ||
+        err.message ||
+        'Registration failed. This email may already be in use.';
+      setServerError(message);
     }
   };
 

@@ -3,6 +3,7 @@ import { Outlet, useLocation, ScrollRestoration } from 'react-router-dom';
 import Navbar from './Navbar';
 import BottomNav from './BottomNav';
 import Footer from './Footer';
+import { useAuth } from '../../features/auth/useAuth';
 
 /**
  * AppLayout Component
@@ -11,6 +12,7 @@ import Footer from './Footer';
  * Enforces scroll-to-top on route changes for desktop & mobile.
  */
 export default function AppLayout() {
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   // Scroll to top on every page change

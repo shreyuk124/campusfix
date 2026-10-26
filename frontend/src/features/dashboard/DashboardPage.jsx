@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, ClipboardList, Clock, Activity, CheckCircle2 } from 'lucide-react';
 import Card from '../../components/ui/Card';
 import StatusBadge from '../../components/ui/StatusBadge';
-import PriorityBadge from '../../components/ui/PriorityBadge';
 import EmptyState from '../../components/ui/EmptyState';
 import { issuesApi } from '../../api';
 
@@ -13,32 +12,28 @@ const defaultSampleIssues = [
     title: 'Water leaking near Block A washroom',
     location: 'Block A · 2nd Floor',
     status: 'In Progress',
-    priority: 'High',
-    team: 'Maintenance',
+    team: 'Plumbing & Water Services',
   },
   {
     id: 'sample-2',
     title: 'Wi-Fi unavailable in the library',
     location: 'Central Library · Ground Floor',
     status: 'Assigned',
-    priority: 'Medium',
-    team: 'IT Support',
+    team: 'Network Operations Center (NOC)',
   },
   {
     id: 'sample-3',
     title: 'Broken lights in the corridor',
     location: 'Block B · 1st Floor',
     status: 'Reported',
-    priority: 'Low',
-    team: 'Electrical',
+    team: 'Unassigned',
   },
   {
     id: 'sample-4',
     title: 'Damaged classroom bench',
     location: 'Room 204 · Block C',
     status: 'Resolved',
-    priority: 'Medium',
-    team: 'Facilities',
+    team: 'Carpentry & Furniture Workshop',
   },
 ];
 
@@ -87,12 +82,11 @@ export default function DashboardPage() {
         issue.building?.name ??
         'Campus Location',
       status: issue.status ?? 'Reported',
-      priority: issue.priorityBand ?? issue.priority ?? 'Medium',
       team:
         issue.assignedTeam?.name ??
-        issue.team?.name ??
-        issue.team ??
-        'Maintenance Team',
+        (typeof issue.assignedTeam === 'string' && issue.assignedTeam !== ''
+          ? issue.assignedTeam
+          : (issue.team?.name ?? (typeof issue.team === 'string' && issue.team !== '' ? issue.team : 'Unassigned'))),
     }));
   }, [apiIssuesData, isSampleData]);
 
@@ -263,7 +257,6 @@ export default function DashboardPage() {
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <StatusBadge status={issue.status} />
-                  <PriorityBadge priority={issue.priority} />
                 </div>
               </article>
             ))}

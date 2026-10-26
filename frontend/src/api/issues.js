@@ -14,7 +14,7 @@ export const issuesApi = {
     const isFormData = typeof FormData !== 'undefined' && formData instanceof FormData;
     const response = await api.post('/issues', formData, {
       headers: isFormData
-        ? { 'Content-Type': 'multipart/form-data' }
+        ? { 'Content-Type': undefined }
         : { 'Content-Type': 'application/json' },
     });
     return response.data;
@@ -38,9 +38,25 @@ export const issuesApi = {
     return response.data;
   },
 
-  // 6. Update issue status (Triage / Admin)
-  updateStatus: async (id, status) => {
-    const response = await api.patch(`/issues/${id}/status`, { status });
+  // 6. Update issue status or assign team (Triage / Admin)
+  updateStatus: async (id, status, note, assignedTeam) => {
+    const payload = {};
+    if (status) payload.status = status;
+    if (note !== undefined) payload.resolutionNote = note;
+    if (assignedTeam !== undefined) payload.assignedTeam = assignedTeam;
+    const response = await api.patch(`/issues/${id}/status`, payload);
+    return response.data;
+  },
+
+  // 7. Assign issue to maintenance team
+  assignTeam: async (id, team, staffName, note) => {
+    const payload = {
+      status: 'Assigned',
+      assignedTeam: team,
+    };
+    if (staffName) payload.assignedStaff = staffName;
+    if (note) payload.resolutionNote = note;
+    const response = await api.patch(`/issues/${id}/status`, payload);
     return response.data;
   },
 };

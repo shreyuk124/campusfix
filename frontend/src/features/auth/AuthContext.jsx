@@ -2,20 +2,11 @@ import { useState, useEffect } from 'react';
 import { authApi } from '../../api/auth';
 import { AuthContext } from './context';
 
-
 const STORAGE_KEY_USER = 'campusfix_auth_user';
 const STORAGE_KEY_TOKEN = 'token';
 
-const DEFAULT_STUDENT_USER = {
-  id: 'usr-student-419',
-  name: 'Alex Sharma',
-  email: 'alex.sharma@campus.edu',
-  role: 'student',
-  studentId: 'ST-2026-8812',
-  isMock: true,
-};
-
 export function AuthProvider({ children }) {
+  // Initialize user from local storage so session persists across reloads
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
@@ -29,18 +20,22 @@ export function AuthProvider({ children }) {
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [isBackendConnected, setIsBackendConnected] = useState(false);
 
+  // Validate existing session on app startup or mobile tab focus
   useEffect(() => {
-    // Check if real token exists and test backend connectivity if possible
     const token = localStorage.getItem(STORAGE_KEY_TOKEN);
     if (token) {
       authApi.getCurrentUser()
         .then((userData) => {
           setIsBackendConnected(true);
-          setUser(userData);
-          localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userData));
+          // Extract the clean student user object from the response
+          const loggedInUser = userData?.user || userData;
+          if (loggedInUser && (loggedInUser.email || loggedInUser.name)) {
+            setUser(loggedInUser);
+            localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(loggedInUser));
+          }
         })
         .catch(() => {
-          // If backend is not running or rejected token, keep local mock user or handle gracefully
+          // If network is offline or server temporarily restarts, preserve existing local user
           setIsBackendConnected(false);
         });
     }
@@ -50,9 +45,8 @@ export function AuthProvider({ children }) {
     setIsLoading(true);
 
     // Artificial brief network delay for realistic loading state
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
-    // If evaluator or user toggled simulate failure for testing failed-login state
     if (simulateFailure) {
       setIsLoading(false);
       const error = new Error('Email or password is incorrect');
@@ -64,7 +58,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      // Attempt live backend first
+      // 1. Attempt live backend login
       const data = await authApi.login({ email, password, role });
       setIsBackendConnected(true);
       const authenticatedUser = data.user || {
@@ -79,16 +73,14 @@ export function AuthProvider({ children }) {
       setIsLoading(false);
       return authenticatedUser;
     } catch (err) {
-      // If live backend failed with a 401 or 400 from server, rethrow real error
       if (err.response && (err.response.status === 401 || err.response.status === 400)) {
         setIsLoading(false);
         throw err;
       }
 
-      // Backend not running / offline: Fallback to prototype mock mode
+      // 2. Fallback to prototype mock mode if backend offline
       setIsBackendConnected(false);
 
-      // Verify dummy password rule for prototype testing
       if (password === 'wrongpassword' || password === 'invalid123') {
         setIsLoading(false);
         const error = new Error('Email or password is incorrect');
@@ -125,8 +117,7 @@ export function AuthProvider({ children }) {
     const studentName = fullName || name;
     setIsLoading(true);
 
-    // Artificial brief network delay for realistic loading state
-    await new Promise((resolve) => setTimeout(resolve, 850));
+    await new Promise((resolve) => setTimeout(resolve, 600));
 
     if (simulateFailure) {
       setIsLoading(false);
@@ -166,7 +157,6 @@ export function AuthProvider({ children }) {
         throw err;
       }
 
-      // Fallback for prototype before backend is connected
       setIsBackendConnected(false);
       const mockUser = {
         id: `usr-${role}-` + Math.floor(100 + Math.random() * 900),
@@ -190,7 +180,7 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } catch {
-      // Ignore network errors on logout in prototype mode
+      // Ignore network errors on logout
     } finally {
       localStorage.removeItem(STORAGE_KEY_TOKEN);
       localStorage.removeItem(STORAGE_KEY_USER);
@@ -221,4 +211,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-

@@ -107,8 +107,7 @@ export default function AdminPage() {
         assignModalIssue.id,
         assignedTeam,
         assignedStaff || 'Assigned Staff',
-        assignModalIssue.priority
-      );
+        );
       addToast({
         type: 'success',
         title: 'Work Order Assigned',

@@ -8,6 +8,11 @@ const buildingSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    code: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     campus: {
       type: String,
       enum: ['north', 'south'],
@@ -26,5 +31,5 @@ const buildingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Building = mongoose.model('Building', buildingSchema);
+export const Building = mongoose.models.Building || mongoose.model('Building', buildingSchema);
 export default Building;

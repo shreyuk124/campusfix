@@ -172,7 +172,7 @@ export default function LandingPage() {
     setAuthSuccess(false);
 
     try {
-      const authUser = await registerUser({
+      const res = await registerUser({
         name: formData.fullName,
         email: formData.email,
         password: formData.password,
@@ -180,8 +180,16 @@ export default function LandingPage() {
         studentId: formData.studentId,
       });
 
+      if (res?.requiresOtp) {
+        navigate('/register', {
+          replace: true,
+          state: { email: formData.email, name: formData.fullName },
+        });
+        return;
+      }
+
       setAuthSuccess(true);
-      setSuccessMessage(`Account created for ${authUser.name}! Taking you to your campus feed...`);
+      setSuccessMessage(`Account created for ${res?.name || formData.fullName}! Taking you to your campus feed...`);
 
       setTimeout(() => {
         navigate('/feed', { replace: true });

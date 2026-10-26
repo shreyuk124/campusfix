@@ -121,7 +121,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ fullName, email, password, studentId, role = 'student' }) => {
+  const register = async ({ fullName, name, email, password, studentId, role = 'student' }) => {
+    const studentName = fullName || name;
     setIsLoading(true);
 
     // Artificial brief network delay for realistic loading state
@@ -139,7 +140,8 @@ export function AuthProvider({ children }) {
 
     try {
       const data = await authApi.register({
-        name: fullName,
+        name: studentName,
+        fullName: studentName,
         email,
         password,
         studentId,
@@ -148,7 +150,8 @@ export function AuthProvider({ children }) {
       setIsBackendConnected(true);
       const newUser = data.user || {
         id: data.id || `usr-${role}-new`,
-        name: fullName,
+        name: studentName,
+        fullName: studentName,
         email,
         role: data.role || role,
       };
@@ -167,7 +170,8 @@ export function AuthProvider({ children }) {
       setIsBackendConnected(false);
       const mockUser = {
         id: `usr-${role}-` + Math.floor(100 + Math.random() * 900),
-        name: fullName,
+        name: studentName,
+        fullName: studentName,
         email,
         studentId: studentId || 'N/A',
         role,

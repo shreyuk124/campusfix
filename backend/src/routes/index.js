@@ -2,6 +2,7 @@ import { Router } from 'express';
 import healthRoutes from './healthRoutes.js';
 import reportRoutes from './reportRoutes.js';
 import feedRoutes from './feedRoutes.js';
+import authRoutes from './authRoutes.js';
 import {
   triageIssueRouter,
   categoryRouter,
@@ -13,6 +14,9 @@ const router = Router();
 
 // Base API endpoints
 router.use('/health', healthRoutes);
+
+// Authentication & Student Profile endpoints
+router.use('/auth', authRoutes);
 
 // Catalog endpoints (Categories, Buildings, Teams)
 router.use('/categories', categoryRouter);

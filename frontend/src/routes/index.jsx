@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { LandingPage } from '../features/landing';
+import { LoginPage, RegisterPage } from '../features/auth';
 import { DashboardPage } from '../features/dashboard';
 import { FeedPage } from '../features/feed';
 import { MyIssuesPage, IssueDetailPage } from '../features/issues';
@@ -92,11 +93,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: <Navigate to="/" replace />,
+        element: <LoginPage />,
       },
       {
         path: 'register',
-        element: <Navigate to="/" replace />,
+        element: <RegisterPage />,
       },
       {
         path: '*',

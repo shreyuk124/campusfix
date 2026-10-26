@@ -13,6 +13,7 @@ function normalizeIssue(doc) {
   const refId = doc.refId || doc.referenceId || `CF-${id.slice(-5)}`;
 
   return {
+    _id: id,
     id,
     referenceId: refId,
     title: doc.title || doc.description?.slice(0, 60) || 'Untitled Issue',
@@ -116,15 +117,19 @@ class IssuesService {
         const localMap = new Map();
         local.forEach((item) => {
           if (item.id) localMap.set(String(item.id).toLowerCase(), item);
+          if (item._id) localMap.set(String(item._id).toLowerCase(), item);
           if (item.referenceId)
             localMap.set(String(item.referenceId).toLowerCase(), item);
+          if (item.title)
+            localMap.set(String(item.title).toLowerCase().trim(), item);
         });
 
         const normalized = apiIssues.map((doc) => {
           const norm = normalizeIssue(doc);
           const existing =
             localMap.get(norm.id.toLowerCase()) ||
-            localMap.get(norm.referenceId.toLowerCase());
+            localMap.get(norm.referenceId.toLowerCase()) ||
+            localMap.get(norm.title.toLowerCase().trim());
           if (existing) {
             norm.hasJoined = existing.hasJoined || false;
             norm.isReporter = existing.isReporter || false;
@@ -137,22 +142,9 @@ class IssuesService {
           return norm;
         });
 
-        // Retain any purely mock items that are not yet on backend
-        const backendIds = new Set(
-          normalized.map((n) => n.id.toLowerCase())
-        );
-        const backendRefIds = new Set(
-          normalized.map((n) => n.referenceId.toLowerCase())
-        );
-        const extraLocal = local.filter(
-          (l) =>
-            !backendIds.has(String(l.id).toLowerCase()) &&
-            !backendRefIds.has(String(l.referenceId || '').toLowerCase())
-        );
-
-        const merged = [...normalized, ...extraLocal];
-        this.saveIssues(merged);
-        return merged;
+        // When MongoDB Atlas is connected, use real live issues as source of truth
+        this.saveIssues(normalized);
+        return normalized;
       }
     } catch (err) {
       console.warn('[issuesService] Backend sync notice:', err.message);
@@ -314,16 +306,24 @@ class IssuesService {
    * Toggle "+1 I am affected too"
    */
   async toggleJoinIssue(id) {
+    const issues = this.getAllLocalIssues();
+    const cleanId = String(id).toLowerCase();
+    const target = issues.find(
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
+    );
+
+    const apiTargetId = target?._id || target?.id || target?.referenceId || id;
+
     // 1. Call real backend API to increment report count in MongoDB Atlas
     try {
-      await issuesApi.upvote(id);
+      await issuesApi.upvote(apiTargetId);
     } catch (e) {
       console.warn('[issuesService] Backend upvote notice:', e.message);
     }
 
     // 2. Update local state
-    const issues = this.getAllLocalIssues();
-    const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
       (item) =>
         item.id.toLowerCase() === cleanId ||
@@ -348,6 +348,9 @@ class IssuesService {
    * Create a new issue report and persist to local storage
    */
   async createIssue({
+    _id,
+    id,
+    referenceId,
     title,
     description,
     category,
@@ -359,8 +362,8 @@ class IssuesService {
   }) {
     const issues = this.getAllLocalIssues();
     const count = issues.length + 1;
-    const refId = `CF-2026-${String(count).padStart(4, '0')}`;
-    const newId = `cf-${Date.now()}`;
+    const realId = String(_id || id || `cf-${Date.now()}`);
+    const realRefId = referenceId || `CF-${realId.slice(-5)}`;
 
     // Extract photo URLs
     const photoUrls = (photos || [])
@@ -371,8 +374,9 @@ class IssuesService {
       .filter(Boolean);
 
     const newIssue = {
-      id: newId,
-      referenceId: refId,
+      _id: realId,
+      id: realId,
+      referenceId: realRefId,
       title: title || description.slice(0, 60).trim(),
       description: description.trim(),
       category: category || 'Other',
@@ -392,7 +396,7 @@ class IssuesService {
       photos: photoUrls,
       timeline: [
         {
-          id: `tl-${Date.now()}`,
+          id: `tl-${realId}`,
           type: 'status_change',
           fromStatus: null,
           toStatus: 'Reported',
@@ -417,14 +421,22 @@ class IssuesService {
    * Confirm issue is fixed (Resolved -> Closed)
    */
   async confirmFixed(id, note = 'Student confirmed repair is satisfactory.') {
+    const issues = this.getAllLocalIssues();
+    const cleanId = String(id).toLowerCase();
+    const target = issues.find(
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
+    );
+
+    const apiTargetId = target?._id || target?.id || target?.referenceId || id;
+
     try {
-      await issuesApi.updateStatus(id, 'Closed', note);
+      await issuesApi.updateStatus(apiTargetId, 'Closed', note);
     } catch (e) {
       console.warn('[issuesService] Backend close notice:', e.message);
     }
 
-    const issues = this.getAllLocalIssues();
-    const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
       (item) =>
         item.id.toLowerCase() === cleanId ||
@@ -460,14 +472,22 @@ class IssuesService {
       throw new Error('A reason is required to reopen an issue.');
     }
 
+    const issues = this.getAllLocalIssues();
+    const cleanId = String(id).toLowerCase();
+    const target = issues.find(
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
+    );
+
+    const apiTargetId = target?._id || target?.id || target?.referenceId || id;
+
     try {
-      await issuesApi.updateStatus(id, 'Reopened', reason);
+      await issuesApi.updateStatus(apiTargetId, 'Reopened', reason);
     } catch (e) {
       console.warn('[issuesService] Backend reopen notice:', e.message);
     }
 
-    const issues = this.getAllLocalIssues();
-    const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
       (item) =>
         item.id.toLowerCase() === cleanId ||
@@ -499,16 +519,25 @@ class IssuesService {
    * Admin / Staff: Update status and persist to MongoDB Atlas
    */
   async updateStatus(id, newStatus, note = '', staffName = 'Staff Member') {
+    const issues = this.getAllLocalIssues();
+    const cleanId = String(id).toLowerCase();
+    const target = issues.find(
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
+    );
+
+    // Identify real MongoDB ID to send to backend
+    const apiTargetId = target?._id || target?.id || target?.referenceId || id;
+
     // Step 1: Update in real MongoDB Atlas backend
     try {
-      await issuesApi.updateStatus(id, newStatus, note);
+      await issuesApi.updateStatus(apiTargetId, newStatus, note);
     } catch (apiErr) {
       console.warn('[issuesService] Backend status update notice:', apiErr.message);
     }
 
     // Step 2: Update local cache so UI reacts immediately
-    const issues = this.getAllLocalIssues();
-    const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
       (item) =>
         item.id.toLowerCase() === cleanId ||
@@ -548,16 +577,24 @@ class IssuesService {
    * Admin: Assign to team and persist to MongoDB Atlas
    */
   async assignIssue(id, team, staffName = '') {
+    const issues = this.getAllLocalIssues();
+    const cleanId = String(id).toLowerCase();
+    const target = issues.find(
+      (item) =>
+        item.id.toLowerCase() === cleanId ||
+        item.referenceId?.toLowerCase() === cleanId
+    );
+
+    const apiTargetId = target?._id || target?.id || target?.referenceId || id;
+
     // Step 1: Update in real MongoDB Atlas backend
     try {
-      await issuesApi.assignTeam(id, team, staffName);
+      await issuesApi.assignTeam(apiTargetId, team, staffName);
     } catch (apiErr) {
       console.warn('[issuesService] Backend assign notice:', apiErr.message);
     }
 
     // Step 2: Update local cache so UI reacts immediately
-    const issues = this.getAllLocalIssues();
-    const cleanId = String(id).toLowerCase();
     const index = issues.findIndex(
       (item) =>
         item.id.toLowerCase() === cleanId ||

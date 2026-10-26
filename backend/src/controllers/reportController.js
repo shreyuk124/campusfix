@@ -387,9 +387,25 @@ export const updateIssueStatus = async (req, res, next) => {
     }
 
     const isObjectId = mongoose.Types.ObjectId.isValid(id);
-    const query = isObjectId ? { _id: id } : { refId: id };
+    const query = isObjectId
+      ? { _id: id }
+      : { refId: new RegExp('^' + escapeRegex(id) + '$', 'i') };
 
-    const issue = await Issue.findOne(query);
+    let issue = await Issue.findOne(query);
+
+    // Fallback: If client sent a timestamp ID (e.g. cf-1793027105009) from legacy cache,
+    // match the real issue created at that exact timestamp (within ±60s)
+    if (!issue && String(id).startsWith('cf-')) {
+      const timestamp = parseInt(String(id).replace('cf-', ''), 10);
+      if (!isNaN(timestamp)) {
+        const windowStart = new Date(timestamp - 60000);
+        const windowEnd = new Date(timestamp + 60000);
+        issue = await Issue.findOne({
+          createdAt: { $gte: windowStart, $lte: windowEnd },
+        }).sort({ createdAt: -1 });
+      }
+    }
+
     if (!issue) {
       return res.status(404).json({
         success: false,

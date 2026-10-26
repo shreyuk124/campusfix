@@ -163,6 +163,7 @@ export default function ReportPage() {
 
     setIsSubmitting(true);
     let refId = null;
+    let realMongoId = null;
     const finalTitle = description.slice(0, 60).trim();
 
     try {
@@ -181,7 +182,9 @@ export default function ReportPage() {
       });
 
       const response = await issuesApi.create(formData);
-      refId = response?.data?.data?.refId || response?.data?.refId;
+      const serverIssue = response?.data?.data || response?.data || response;
+      realMongoId = serverIssue._id;
+      refId = serverIssue.refId || refId;
     } catch (apiError) {
       console.error('API submission failed:', apiError);
       const errorMsg =
@@ -194,8 +197,11 @@ export default function ReportPage() {
       return;
     }
 
-    // Persist to local store for immediate UI reflection
+    // Persist to local store for immediate UI reflection using the real MongoDB ID and refId
     const localIssue = await issuesService.createIssue({
+      _id: realMongoId,
+      id: realMongoId,
+      referenceId: refId || undefined,
       title: finalTitle,
       description: description.trim(),
       category,
@@ -203,7 +209,6 @@ export default function ReportPage() {
       building: location.building,
       location: specificLocation.trim(),
       photos,
-      referenceId: refId || undefined,
     });
 
     sessionStorage.removeItem(DRAFT_STORAGE_KEY);

@@ -113,7 +113,7 @@ export function parseSort(sortParam) {
       return {
         sortKey: 'priority',
         // Sort highest priority score first, break ties with newest
-        sortObj: { priorityScore: -1, createdAt: -1 },
+        sortObj: { reportCount: -1, createdAt: -1 },
       };
 
     case 'overdue':

@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Enable Cross-Origin requests from the frontend
 app.use(
   cors({
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -18,12 +19,26 @@ app.use(
   })
 );
 
+// Clear, beginner-friendly request logger that logs method, path, status, and duration
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[HTTP] ${req.method} ${req.originalUrl || req.url} -> ${res.statusCode} (${Date.now() - start}ms)`);
+  });
+  next();
+});
+
+// Middleware for parsing JSON and Form bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Mount API routes
 app.use('/api/v1', apiRoutes);
 
+// Health check root endpoint
 app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to CampusFix API Server. Use /api/v1 for API endpoints.',
@@ -31,6 +46,7 @@ app.get('/', (req, res) => {
   });
 });
 
+// Centralized error handling
 app.use(notFound);
 app.use(errorHandler);
 

@@ -2,6 +2,17 @@ import mongoose from 'mongoose';
 import fs from 'fs';
 import { Issue } from '../models/Issue.js';
 import { Report } from '../models/Report.js';
+import { Category } from '../models/Category.js';
+import { Building } from '../models/Building.js';
+import { User } from '../models/User.js';
+import { Team } from '../models/Team.js';
+
+/**
+ * Helper: Escapes special characters in string for safe RegExp queries
+ */
+const escapeRegex = (str) => {
+  return String(str || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 /**
  * Helper: Generates a human-friendly ticket ID (e.g. CF-72941)
@@ -12,66 +23,81 @@ const generateRefId = () => {
 };
 
 /**
- * Helper: Calculates priority band based on accumulated priority score
- */
-const calculatePriorityBand = (score) => {
-  if (score >= 40) return 'Critical';
-  if (score >= 25) return 'High';
-  if (score >= 15) return 'Medium';
-  return 'Low';
-};
-
-/**
  * @desc    Find active issues in the same building & category for duplicate interception
  * @route   GET /api/v1/issues/similar
  * @access  Public
  */
 export const getSimilarIssues = async (req, res, next) => {
   try {
-    // Step 1: Extract building and category from query parameters
-    const { buildingId, categoryId } = req.query;
+    const bldInput = req.query.buildingId || req.query.building;
+    const catInput = req.query.categoryId || req.query.category;
 
-    // Step 2: Ensure both required query parameters are provided
-    if (!buildingId || !categoryId) {
+    if (!bldInput || !catInput) {
       return res.status(400).json({
         success: false,
-        message: 'Both buildingId and categoryId query parameters are required.',
+        message: 'Both building and category query parameters are required.',
       });
     }
 
-    // Step 3: Validate MongoDB ObjectId formats to prevent cast errors
-    const isValidBuilding = mongoose.Types.ObjectId.isValid(buildingId);
-    const isValidCategory = mongoose.Types.ObjectId.isValid(categoryId);
+    // Resolve building ID from string or ObjectId
+    let resolvedBuildingId = bldInput;
+    if (!mongoose.Types.ObjectId.isValid(bldInput)) {
+      const cleanBld = String(bldInput).trim();
+      const bldDoc = await Building.findOne({
+        $or: [
+          { name: cleanBld },
+          { name: new RegExp('^' + escapeRegex(cleanBld) + '$', 'i') },
+          { code: new RegExp('^' + escapeRegex(cleanBld) + '$', 'i') },
+        ],
+      });
+      if (bldDoc) resolvedBuildingId = bldDoc._id;
+    }
 
-    if (!isValidBuilding || !isValidCategory) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid buildingId or categoryId format.',
+    // Resolve category ID from string key/name or ObjectId
+    let resolvedCategoryId = catInput;
+    if (!mongoose.Types.ObjectId.isValid(catInput)) {
+      const cleanCat = String(catInput).trim();
+      const catDoc = await Category.findOne({
+        $or: [
+          { key: cleanCat.toLowerCase() },
+          { name: cleanCat },
+          { name: new RegExp('^' + escapeRegex(cleanCat) + '$', 'i') },
+        ],
+      });
+      if (catDoc) resolvedCategoryId = catDoc._id;
+    }
+
+    // If building or category not in DB yet, there are 0 duplicates
+    if (
+      !mongoose.Types.ObjectId.isValid(resolvedBuildingId) ||
+      !mongoose.Types.ObjectId.isValid(resolvedCategoryId)
+    ) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: [],
       });
     }
 
-    // Step 4: Filter by active statuses only (resolved issues are not considered duplicates)
+    // Only active (unresolved) issues can be upvoted as duplicates
     const activeStatuses = ['Reported', 'Assigned', 'In Progress'];
 
-    // Step 5: Query issues using the compound index { building: 1, category: 1, status: 1 }
     const similarIssues = await Issue.find({
-      building: buildingId,
-      category: categoryId,
+      building: resolvedBuildingId,
+      category: resolvedCategoryId,
       status: { $in: activeStatuses },
     })
-      .select('refId title locationText photos status reportCount createdAt') // only fetch fields needed for duplicate cards
-      .sort({ createdAt: -1 }) // newest issues first
-      .limit(5) // keep list concise for student preview
-      .lean(); // return plain JS objects for lower memory usage and speed
+      .select('refId title locationText photos status reportCount createdAt')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean();
 
-    // Step 6: Send back matching issues
     return res.status(200).json({
       success: true,
       count: similarIssues.length,
       data: similarIssues,
     });
   } catch (error) {
-    // Forward unexpected errors to the global error middleware
     next(error);
   }
 };
@@ -82,21 +108,20 @@ export const getSimilarIssues = async (req, res, next) => {
  * @access  Public / Student
  */
 export const createIssue = async (req, res, next) => {
-  // Track disk paths for rollback in case MongoDB or downstream operations fail
   let uploadedFilePaths = [];
 
   try {
-    // Step 1: File Verification - Photos are optional (up to 3 supported)
+    // Step 1: Collect uploaded photos if any
     if (req.files && req.files.length > 0) {
       uploadedFilePaths = req.files.map((file) => file.path);
     }
 
-    // Transform disk filenames into client-consumable URL paths
-    const photoUrls = req.files && req.files.length > 0
-      ? req.files.map((file) => `/uploads/${file.filename}`)
-      : [];
+    const photoUrls =
+      req.files && req.files.length > 0
+        ? req.files.map((file) => `/uploads/${file.filename}`)
+        : [];
 
-    // Step 2: Form Body Extraction & Validation
+    // Step 2: Validate required form inputs
     const {
       title,
       category,
@@ -111,23 +136,93 @@ export const createIssue = async (req, res, next) => {
       throw new Error('MISSING_REQUIRED_FIELDS');
     }
 
-    // Step 3: Database Identifier Validation
+    console.log('[createIssue] Incoming body:', req.body);
+    console.log('[createIssue] Uploaded files count:', req.files?.length || 0);
+
+    // Step 3: Safely resolve Category (by ID, exact name, or safe regex)
+    let resolvedCategoryId = category;
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      const cleanCat = String(category).trim();
+      let catDoc = await Category.findOne({
+        $or: [
+          { key: cleanCat.toLowerCase() },
+          { name: cleanCat },
+          { name: new RegExp('^' + escapeRegex(cleanCat) + '$', 'i') },
+        ],
+      });
+
+      if (!catDoc) {
+        try {
+          console.log(`[createIssue] Category "${category}" not found in DB. Auto-creating...`);
+          catDoc = await Category.create({
+            name: cleanCat,
+            key: cleanCat.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+            description: cleanCat,
+          });
+        } catch (err) {
+          catDoc = await Category.findOne({
+            $or: [{ key: cleanCat.toLowerCase() }, { name: cleanCat }],
+          });
+        }
+      }
+
+      if (catDoc) resolvedCategoryId = catDoc._id;
+    }
+
+    // Step 4: Safely resolve Building (handles names with parentheses, slashes, ampersands)
+    let resolvedBuildingId = building;
+    if (!mongoose.Types.ObjectId.isValid(building)) {
+      const cleanBuilding = String(building).trim();
+      let bldDoc = await Building.findOne({
+        $or: [
+          { name: cleanBuilding },
+          { name: new RegExp('^' + escapeRegex(cleanBuilding) + '$', 'i') },
+          { code: new RegExp('^' + escapeRegex(cleanBuilding) + '$', 'i') },
+        ],
+      });
+
+      if (!bldDoc) {
+        try {
+          console.log(`[createIssue] Building "${building}" not found in DB. Auto-creating...`);
+          const code =
+            (cleanBuilding.replace(/[^a-zA-Z0-9 ]/g, '').split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 6) || 'BLD') +
+            `-${Math.floor(100 + Math.random() * 900)}`;
+          bldDoc = await Building.create({
+            name: cleanBuilding,
+            code,
+            campus: campus ? campus.toLowerCase() : 'north',
+          });
+        } catch (err) {
+          bldDoc = await Building.findOne({ name: cleanBuilding });
+        }
+      }
+
+      if (bldDoc) resolvedBuildingId = bldDoc._id;
+    }
+
     if (
-      !mongoose.Types.ObjectId.isValid(building) ||
-      !mongoose.Types.ObjectId.isValid(category)
+      !mongoose.Types.ObjectId.isValid(resolvedBuildingId) ||
+      !mongoose.Types.ObjectId.isValid(resolvedCategoryId)
     ) {
       throw new Error('INVALID_ID_FORMAT');
     }
 
-    // Fallback user attribution: authenticated user -> body user -> newly generated mock ID
-    const reporterId = req.user?._id || userId || new mongoose.Types.ObjectId();
+    // Step 5: Resolve reporter attribution
+    let reporterId = req.user?._id;
+    if (!reporterId && userId && mongoose.Types.ObjectId.isValid(userId)) {
+      reporterId = userId;
+    }
+    if (!reporterId) {
+      const anyUser = await User.findOne({ role: 'student' });
+      reporterId = anyUser ? anyUser._id : new mongoose.Types.ObjectId();
+    }
 
-    // Step 4: Instantiate & Save Issue Document
+    // Step 6: Create and save Issue (clean model, reportCount-driven, NO priority scores)
     const newIssue = new Issue({
       refId: generateRefId(),
       title: title.trim(),
-      category,
-      building,
+      category: resolvedCategoryId,
+      building: resolvedBuildingId,
       campus: campus.toLowerCase(),
       locationText: locationText.trim(),
       description: description.trim(),
@@ -135,13 +230,11 @@ export const createIssue = async (req, res, next) => {
       createdBy: reporterId,
       reportCount: 1,
       status: 'Reported',
-      priorityScore: 10, // Base default score for newly submitted complaints
-      priorityBand: 'Low',
     });
 
     const savedIssue = await newIssue.save();
 
-    // Step 5: Seed the Report Collection (Anti-Self-Upvote Lock)
+    // Step 7: Record submission report
     await Report.create({
       issue: savedIssue._id,
       reporter: reporterId,
@@ -149,7 +242,7 @@ export const createIssue = async (req, res, next) => {
       photos: photoUrls,
     });
 
-    // Step 6: Send Clean 201 Response
+    // Step 8: Return HTTP 201 Created
     return res.status(201).json({
       success: true,
       message: 'Issue reported successfully',
@@ -164,7 +257,9 @@ export const createIssue = async (req, res, next) => {
       },
     });
   } catch (error) {
-    // Step 7: The Orphan File Rollback - clean up uploaded files if DB save failed
+    console.error('[createIssue error]:', error);
+
+    // Rollback uploaded photos if MongoDB save fails
     uploadedFilePaths.forEach((filePath) => {
       if (fs.existsSync(filePath)) {
         try {
@@ -175,7 +270,6 @@ export const createIssue = async (req, res, next) => {
       }
     });
 
-    // Handle known validation errors with clean 400 Bad Request responses
     if (error.message === 'MISSING_REQUIRED_FIELDS') {
       return res.status(400).json({
         success: false,
@@ -190,7 +284,6 @@ export const createIssue = async (req, res, next) => {
       });
     }
 
-    // Forward unexpected exceptions to centralized error middleware
     next(error);
   }
 };
@@ -202,7 +295,6 @@ export const createIssue = async (req, res, next) => {
  */
 export const upvoteIssue = async (req, res, next) => {
   try {
-    // Step 1: Extract and validate issue ID from URL parameters
     const { id: issueId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(issueId)) {
@@ -212,7 +304,6 @@ export const upvoteIssue = async (req, res, next) => {
       });
     }
 
-    // Step 2: Ensure target issue exists and is not already resolved
     const existingIssue = await Issue.findById(issueId);
 
     if (!existingIssue) {
@@ -225,15 +316,13 @@ export const upvoteIssue = async (req, res, next) => {
     if (['Resolved', 'Closed'].includes(existingIssue.status)) {
       return res.status(400).json({
         success: false,
-        message: 'This issue has already been resolved or closed. Please report a new issue if the problem reoccurred.',
+        message: 'This issue has already been resolved or closed.',
       });
     }
 
-    // Step 3: Resolve reporter identity (token user, body user, or mock fallback)
     const reporterId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
     const note = req.body.note ? req.body.note.trim() : 'Upvoted by affected student';
 
-    // Step 4: Atomic Anti-Spam Check using Report collection unique index { issue: 1, reporter: 1 }
     try {
       await Report.create({
         issue: existingIssue._id,
@@ -241,7 +330,6 @@ export const upvoteIssue = async (req, res, next) => {
         note,
       });
     } catch (createErr) {
-      // MongoDB code 11000 = Duplicate key violation
       if (createErr.code === 11000) {
         return res.status(409).json({
           success: false,
@@ -251,26 +339,16 @@ export const upvoteIssue = async (req, res, next) => {
       throw createErr;
     }
 
-    // Step 5: Atomically increment reportCount and priorityScore to prevent race conditions
     const updatedIssue = await Issue.findByIdAndUpdate(
       existingIssue._id,
       {
         $inc: {
           reportCount: 1,
-          priorityScore: 5, // add +5 urgency points per affected student
         },
       },
-      { new: true } // return the freshly updated document
+      { new: true }
     );
 
-    // Step 6: Recalculate and update priorityBand if threshold crossed
-    const newBand = calculatePriorityBand(updatedIssue.priorityScore);
-    if (updatedIssue.priorityBand !== newBand) {
-      updatedIssue.priorityBand = newBand;
-      await updatedIssue.save();
-    }
-
-    // Step 7: Send clean HTTP 200 response
     return res.status(200).json({
       success: true,
       message: 'Issue upvoted successfully.',
@@ -278,52 +356,56 @@ export const upvoteIssue = async (req, res, next) => {
         issueId: updatedIssue._id,
         refId: updatedIssue.refId,
         reportCount: updatedIssue.reportCount,
-        priorityScore: updatedIssue.priorityScore,
-        priorityBand: updatedIssue.priorityBand,
         status: updatedIssue.status,
       },
     });
   } catch (error) {
-    // Forward unexpected errors to the global error middleware
     next(error);
   }
 };
 
-
 /**
- * @desc    Update issue status & resolution notes (Authority & Maintenance workflow)
+ * @desc    Update issue status, resolution notes, and assign maintenance teams
  * @route   PATCH /api/v1/issues/:id/status
- * @access  Staff / Admin
+ * @route   POST /api/v1/issues/:id/assign
+ * @access  Staff / Admin / Public
  */
 export const updateIssueStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, resolutionNote } = req.body;
+    const { status, resolutionNote, note } = req.body;
+    const incomingTeam = req.body.assignedTeam || req.body.team || req.body.teamId;
 
-    const validStatuses = [
-      'Reported',
-      'Assigned',
-      'In Progress',
-      'Resolved',
-      'Closed',
-      'Reopened',
-    ];
-
-    if (!status || !validStatuses.includes(status)) {
+    if (!status && !incomingTeam && resolutionNote === undefined && note === undefined) {
       return res.status(400).json({
         success: false,
         error: {
-          code: 'INVALID_STATUS',
-          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+          code: 'MISSING_UPDATE_DATA',
+          message: 'At least one field (status, assignedTeam, resolutionNote) must be provided.',
         },
       });
     }
 
-    // Support lookup by MongoDB _id or human refId (e.g. CF-2026-0001)
     const isObjectId = mongoose.Types.ObjectId.isValid(id);
-    const query = isObjectId ? { _id: id } : { refId: id };
+    const query = isObjectId
+      ? { _id: id }
+      : { refId: new RegExp('^' + escapeRegex(id) + '$', 'i') };
 
-    const issue = await Issue.findOne(query);
+    let issue = await Issue.findOne(query);
+
+    // Fallback: If client sent a timestamp ID (e.g. cf-1793027105009) from legacy cache,
+    // match the real issue created at that exact timestamp (within ±60s)
+    if (!issue && String(id).startsWith('cf-')) {
+      const timestamp = parseInt(String(id).replace('cf-', ''), 10);
+      if (!isNaN(timestamp)) {
+        const windowStart = new Date(timestamp - 60000);
+        const windowEnd = new Date(timestamp + 60000);
+        issue = await Issue.findOne({
+          createdAt: { $gte: windowStart, $lte: windowEnd },
+        }).sort({ createdAt: -1 });
+      }
+    }
+
     if (!issue) {
       return res.status(404).json({
         success: false,
@@ -334,23 +416,89 @@ export const updateIssueStatus = async (req, res, next) => {
       });
     }
 
-    issue.status = status;
-    if (status === 'Resolved') {
-      issue.resolvedAt = new Date();
-    }
-    if (resolutionNote !== undefined) {
-      issue.resolutionNote = resolutionNote;
+    // Step 1: Assign maintenance team if provided
+    if (incomingTeam) {
+      let teamId = incomingTeam;
+      if (!mongoose.Types.ObjectId.isValid(incomingTeam)) {
+        const cleanTeamName = String(incomingTeam).trim();
+        let teamDoc = await Team.findOne({
+          $or: [
+            { name: cleanTeamName },
+            { name: new RegExp('^' + escapeRegex(cleanTeamName) + '$', 'i') },
+          ],
+        });
+        if (!teamDoc) {
+          try {
+            console.log(`[updateIssueStatus] Team "${cleanTeamName}" not found in DB. Auto-creating...`);
+            teamDoc = await Team.create({ name: cleanTeamName });
+          } catch (teamErr) {
+            teamDoc = await Team.findOne({ name: cleanTeamName });
+          }
+        }
+        if (teamDoc) {
+          teamId = teamDoc._id;
+        }
+      }
+      issue.assignedTeam = teamId;
+      // Auto-transition to Assigned if currently Reported
+      if (issue.status === 'Reported' && !status) {
+        issue.status = 'Assigned';
+      }
     }
 
+    // Step 2: Update status if provided
+    if (status) {
+      const validStatuses = [
+        'Reported',
+        'Assigned',
+        'In Progress',
+        'Resolved',
+        'Closed',
+        'Reopened',
+      ];
+
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_STATUS',
+            message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+          },
+        });
+      }
+
+      issue.status = status;
+      if (status === 'Resolved') {
+        issue.resolvedAt = new Date();
+      }
+      if (status === 'Closed') {
+        issue.closedAt = new Date();
+      }
+    }
+
+    // Step 3: Update resolution notes if provided
+    const noteText = resolutionNote !== undefined ? resolutionNote : note;
+    if (noteText !== undefined) {
+      issue.resolutionNote = String(noteText).trim();
+    }
+
+    // Step 4: Persist changes to MongoDB Atlas
     await issue.save();
+
+    // Step 5: Populate relations for rich response
+    if (mongoose.models.Team) await issue.populate('assignedTeam', 'name');
+    if (mongoose.models.Building) await issue.populate('building', 'name campus');
+    if (mongoose.models.Category) await issue.populate('category', 'name label');
 
     return res.status(200).json({
       success: true,
-      message: `Issue status successfully transitioned to '${status}'.`,
+      message: `Issue updated successfully.`,
       data: {
         id: issue._id,
+        _id: issue._id,
         refId: issue.refId,
         status: issue.status,
+        assignedTeam: issue.assignedTeam?.name || 'Unassigned',
         resolutionNote: issue.resolutionNote,
         resolvedAt: issue.resolvedAt,
         updatedAt: issue.updatedAt,

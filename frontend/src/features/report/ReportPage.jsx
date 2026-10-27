@@ -1,127 +1,158 @@
-import { useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, AlertCircle } from 'lucide-react';
 import LocationPicker from './components/LocationPicker';
 import CategorySelector from './components/CategorySelector';
 import DuplicateChecker from './components/DuplicateChecker';
 import PhotoUploader from './components/PhotoUploader';
 import ReportSuccess from './components/ReportSuccess';
 import Button from '../../components/ui/Button';
-import { MOCK_EXISTING_ISSUES } from './mock/mockDuplicates';
 import { issuesApi } from '../../api/issues';
 import issuesService from '../issues/issuesService';
+
+const DRAFT_STORAGE_KEY = 'campusfix_active_report_draft';
 
 /**
  * ReportPage Component
  * 
- * Flow:
- * 1. Step 1: Campus & Building (Fast selection)
- * 2. Step 2: Category (Electrical, Plumbing, etc.)
- * 3. Step 3: EARLY DUPLICATE INTERCEPTION
- *    - If matching issues exist:
- *        -> Student can click "I am affected too"
- *        -> Or click "None of these, report as new" to unlock Step 4
- *    - If NO matching issues exist:
- *        -> Step 4 unlocks automatically!
+ * 4-Step Student Reporting Journey:
+ * 1. Step 1: Campus & Building Selection
+ * 2. Step 2: Problem Category Selection
+ * 3. Step 3: Live Duplicate Interception from MongoDB Atlas
+ *    - Allows 1-tap "I am affected too" upvoting
+ *    - Allows "Report anyway as a new issue" to bypass and file directly
  * 4. Step 4: Specific Room/Floor + Optional Photos + Description
  */
 export default function ReportPage() {
-  // 1. High-level Location State
-  const [location, setLocation] = useState({
-    campus: '',
-    building: '',
+  // 1. High-level Location State (restores from draft if page reloads)
+  const [location, setLocation] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.campus) {
+          return { campus: parsed.campus, building: parsed.building || '' };
+        }
+      }
+    } catch {}
+    return { campus: '', building: '' };
   });
 
-  // 2. Specific room/floor (only typed if reporting as new)
-  const [specificLocation, setSpecificLocation] = useState('');
+  // 2. Specific room / landmark
+  const [specificLocation, setSpecificLocation] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) return JSON.parse(saved).specificLocation || '';
+    } catch {}
+    return '';
+  });
 
   // 3. Category State
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) return JSON.parse(saved).category || '';
+    } catch {}
+    return '';
+  });
 
-  // 4. Optional Photos State
+  // 4. Photos State
   const [photos, setPhotos] = useState([]);
 
   // 5. Description State
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) return JSON.parse(saved).description || '';
+    } catch {}
+    return '';
+  });
 
-  // 6. Duplicate Interception State:
-  // Tracks if the student explicitly clicked "None of these - report as new"
+  // 6. Live Duplicates & Bypass State
+  const [hasDuplicates, setHasDuplicates] = useState(false);
   const [bypassedDuplicates, setBypassedDuplicates] = useState(false);
 
   // 7. Submission / Success State
   const [submissionState, setSubmissionState] = useState(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  /**
-   * Check if any duplicates exist for the current building + category combination
-   */
-  const hasDuplicates = Boolean(
-    location.building &&
-    category &&
-    MOCK_EXISTING_ISSUES.some(
-      (issue) =>
-        issue.building.toLowerCase() === location.building.toLowerCase() &&
-        issue.category.toLowerCase() === category.toLowerCase()
-    )
-  );
+  // Auto-save form inputs to sessionStorage so mobile camera returns don't wipe data
+  useEffect(() => {
+    if (location.campus || location.building || category || specificLocation || description) {
+      sessionStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({
+          campus: location.campus,
+          building: location.building,
+          category,
+          specificLocation,
+          description,
+        })
+      );
+    }
+  }, [location, category, specificLocation, description]);
 
   const handleReset = () => {
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     setLocation({ campus: '', building: '' });
     setSpecificLocation('');
     setCategory('');
     setPhotos([]);
     setDescription('');
+    setHasDuplicates(false);
     setBypassedDuplicates(false);
     setSubmissionState(null);
     setErrors({});
   };
 
   /**
-   * Action A: Student clicked "I am affected too" (Upvote existing issue)
+   * Action A: Student clicked "I am affected too"
    */
   const handleAffectedToo = async (existingIssue) => {
+    const issueId = existingIssue._id || existingIssue.id;
+
     try {
-      if (existingIssue._id || existingIssue.id) {
-        await issuesApi.upvote(existingIssue._id || existingIssue.id);
+      if (issueId) {
+        await issuesApi.upvote(issueId);
       }
     } catch (err) {
       console.warn('Upvote network fallback:', err.message);
     }
 
     try {
-      if (existingIssue.id || existingIssue.referenceId) {
-        await issuesService.toggleJoinIssue(existingIssue.id || existingIssue.referenceId);
+      if (issueId || existingIssue.refId) {
+        await issuesService.toggleJoinIssue(issueId || existingIssue.refId);
       }
     } catch (localErr) {
       console.warn('Local toggle join fallback:', localErr);
     }
 
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     setSubmissionState({
       type: 'affected',
-      referenceId: existingIssue.refId || existingIssue.referenceId || existingIssue.id,
+      referenceId: existingIssue.refId || existingIssue.referenceId || issueId,
       issueTitle: existingIssue.title,
     });
   };
 
   /**
-   * Action B: Student confirmed their issue is new
+   * Action B: Student clicked "Report anyway as a new issue"
    */
   const handleProceedAsNew = () => {
     setBypassedDuplicates(true);
   };
 
   /**
-   * Validate & Submit Form with Real Multipart Ingestion
+   * Action C: Submit brand-new issue
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newErrors = {};
 
-    if (!location.campus) newErrors.campus = 'Please select a campus (North or South).';
+    const newErrors = {};
+    if (!location.campus) newErrors.campus = 'Please select a campus.';
     if (!location.building) newErrors.building = 'Please select a building.';
-    if (!category) newErrors.category = 'Please select an issue category.';
-    if (!specificLocation.trim()) newErrors.specificLocation = 'Please specify the exact room, lab, or floor.';
+    if (!category) newErrors.category = 'Please choose a problem category.';
+    if (!specificLocation.trim()) newErrors.specificLocation = 'Please specify the exact room, floor, or landmark.';
     if (!description.trim()) newErrors.description = 'Please provide a description of the problem.';
 
     if (Object.keys(newErrors).length > 0) {
@@ -131,12 +162,11 @@ export default function ReportPage() {
     }
 
     setIsSubmitting(true);
-
     let refId = null;
+    let realMongoId = null;
     const finalTitle = description.slice(0, 60).trim();
 
     try {
-      // Step 1: Construct FormData payload for binary multipart upload
       const formData = new FormData();
       formData.append('title', finalTitle);
       formData.append('campus', location.campus.toLowerCase());
@@ -145,25 +175,33 @@ export default function ReportPage() {
       formData.append('locationText', specificLocation.trim());
       formData.append('description', description.trim());
 
-      // Step 2: Append physical photographic evidence files if user provided any (optional, 0 to 3)
       photos.forEach((photoObj) => {
         if (photoObj.file) {
           formData.append('photos', photoObj.file);
         }
       });
 
-      // Step 3: Execute POST request to backend API (if online)
       const response = await issuesApi.create(formData);
-      if (response?.data?.refId) {
-        refId = response.data.refId;
-      }
+      const serverIssue = response?.data?.data || response?.data || response;
+      realMongoId = serverIssue._id;
+      refId = serverIssue.refId || refId;
     } catch (apiError) {
-      console.warn('Backend unavailable, syncing report to local issues store:', apiError);
+      console.error('API submission failed:', apiError);
+      const errorMsg =
+        apiError.response?.data?.message ||
+        apiError.response?.data?.error?.message ||
+        apiError.message ||
+        'Server error submitting issue. Please try again.';
+      setErrors((prev) => ({ ...prev, submit: errorMsg }));
+      setIsSubmitting(false);
+      return;
     }
 
-    // Always persist to local issuesService so the new report is immediately visible
-    // on Public Feed, "My Reports", and Admin Dashboard
+    // Persist to local store for immediate UI reflection using the real MongoDB ID and refId
     const localIssue = await issuesService.createIssue({
+      _id: realMongoId,
+      id: realMongoId,
+      referenceId: refId || undefined,
       title: finalTitle,
       description: description.trim(),
       category,
@@ -173,6 +211,7 @@ export default function ReportPage() {
       photos,
     });
 
+    sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     setIsSubmitting(false);
     setSubmissionState({
       type: 'new',
@@ -181,7 +220,7 @@ export default function ReportPage() {
     });
   };
 
-  // If successfully submitted or upvoted, render confirmation screen
+  // Render confirmation screen once submitted or upvoted
   if (submissionState) {
     return (
       <ReportSuccess
@@ -193,12 +232,7 @@ export default function ReportPage() {
     );
   }
 
-  // Can we show the detailed form fields?
-  // YES if:
-  // 1. Campus, Building, and Category are chosen
-  // 2. AND EITHER:
-  //    a) There are NO duplicates in this building (!hasDuplicates)
-  //    b) OR duplicates were found and user clicked "None of these, report as new" (bypassedDuplicates)
+  // Show detailed fields if: building + category picked AND (no duplicates found OR user bypassed them)
   const canShowDetailedInputs =
     Boolean(location.building && category) && (!hasDuplicates || bypassedDuplicates);
 
@@ -224,14 +258,15 @@ export default function ReportPage() {
             building={location.building}
             onLocationChange={(newLocation) => {
               setLocation(newLocation);
-              setBypassedDuplicates(false); // Reset duplicate bypass if location changes
+              setBypassedDuplicates(false);
+              setHasDuplicates(false);
               setErrors((prev) => ({ ...prev, campus: '', building: '' }));
             }}
             errors={errors}
           />
         </section>
 
-        {/* Step 2: Category Selector (Visible once Campus & Building are picked) */}
+        {/* Step 2: Category Selector */}
         {location.building && (
           <>
             <hr className="border-line" />
@@ -240,7 +275,8 @@ export default function ReportPage() {
                 value={category}
                 onChange={(newCategory) => {
                   setCategory(newCategory);
-                  setBypassedDuplicates(false); // Re-run duplicate check on category change
+                  setBypassedDuplicates(false);
+                  setHasDuplicates(false);
                   setErrors((prev) => ({ ...prev, category: '' }));
                 }}
                 error={errors.category}
@@ -249,32 +285,32 @@ export default function ReportPage() {
           </>
         )}
 
-        {/* Step 3: Early Duplicate Interception Banner */}
-        {/* Only shown if duplicates actually exist and haven't been bypassed yet */}
-        {hasDuplicates && !bypassedDuplicates && (
+        {/* Step 3: Live Duplicate Interception (Only shown if building & category chosen, and not yet bypassed) */}
+        {location.building && category && !bypassedDuplicates && (
           <section className="pt-1">
             <DuplicateChecker
               building={location.building}
               category={category}
               onAffectedToo={handleAffectedToo}
               onProceedAsNew={handleProceedAsNew}
+              onDuplicatesFound={setHasDuplicates}
             />
           </section>
         )}
 
-        {/* Step 4: Detailed Input (Room, Photos, Description) */}
+        {/* Step 4: Room, Photos, Description */}
         {canShowDetailedInputs && (
           <div className="space-y-7 animate-in fade-in duration-300">
             <hr className="border-line" />
 
-            {/* 4A: Exact Spot / Room / Floor */}
+            {/* Exact Spot / Room */}
             <section className="space-y-1.5">
               <label htmlFor="specific-location" className="block text-sm font-semibold text-ink flex items-center gap-1.5">
                 <MapPin size={16} className="text-brand-600" />
                 <span>Exact Spot / Room / Floor in {location.building} <span className="text-danger">*</span></span>
               </label>
               <p className="text-xs text-muted">
-                Specify the room number, lab, or landmark so the maintenance technician can find it immediately.
+                Specify the room number, lab, or landmark so the technician can locate it immediately.
               </p>
               <input
                 id="specific-location"
@@ -298,7 +334,7 @@ export default function ReportPage() {
 
             <hr className="border-line" />
 
-            {/* 4B: Optional Photo Evidence */}
+            {/* Photo Evidence */}
             <section>
               <PhotoUploader
                 photos={photos}
@@ -312,7 +348,7 @@ export default function ReportPage() {
 
             <hr className="border-line" />
 
-            {/* 4C: Problem Description Textarea */}
+            {/* Description Textarea */}
             <section className="space-y-1.5">
               <label htmlFor="problem-desc" className="block text-sm font-semibold text-ink">
                 Problem Description <span className="text-danger">*</span>
@@ -340,7 +376,15 @@ export default function ReportPage() {
               )}
             </section>
 
-            {/* Final Submit Button */}
+            {/* Server Error Banner */}
+            {errors.submit && (
+              <div className="p-3.5 bg-danger-50 border border-danger-200 text-danger-700 text-sm rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-danger flex-shrink-0" />
+                <span>{errors.submit}</span>
+              </div>
+            )}
+
+            {/* Submit Button */}
             <div className="pt-2">
               <Button
                 type="submit"

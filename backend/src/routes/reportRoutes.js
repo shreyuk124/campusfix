@@ -25,4 +25,8 @@ router.post('/:id/reports', upvoteIssue);
 // Authority & maintenance workflow: transition issue status & add resolution notes
 router.patch('/:id/status', updateIssueStatus);
 
+// POST /api/v1/issues/:id/assign
+// Assign or reassign maintenance team
+router.post('/:id/assign', updateIssueStatus);
+
 export default router;

@@ -1,14 +1,43 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { User } from '../models/User.js';
+import {
+  RegistrationChallenge,
+  hashOtp,
+  verifyOtpHash,
+} from '../models/RegistrationChallenge.js';
+import { sendRegistrationOtpEmail } from '../services/emailService.js';
 
-const COEP_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@coeptech\.ac\.in$/;
+/**
+ * Institutional Email Domain Validator
+ * Permitted domain: exactly 'coeptech.ac.in' (case-insensitive)
+ */
+export const isInstitutionalEmail = (email) => {
+  if (typeof email !== 'string') return false;
+  const normalized = email.trim().toLowerCase();
+  const parts = normalized.split('@');
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  if (!local || local.length > 64) return false;
+  if (domain !== 'coeptech.ac.in') return false;
+  // Local part validation: letters, digits, and standard punctuation (. _ % + -)
+  const localRegex = /^[a-zA-Z0-9._%+-]+$/;
+  return localRegex.test(local);
+};
+
+/**
+ * Generate a cryptographically secure 6-digit numeric OTP
+ */
+export const generateNumericOtp = () => {
+  return crypto.randomInt(100000, 1000000).toString();
+};
 
 /**
  * Helper to generate a signed JWT for an authenticated user.
  * Expires in 24 hours.
  */
-const generateToken = (userId, role) => {
+export const generateToken = (userId, role) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
@@ -28,24 +57,25 @@ const generateToken = (userId, role) => {
 /**
  * Helper to return a safe user profile without sensitive fields.
  */
-const sanitizeUser = (user) => ({
+export const sanitizeUser = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
   role: user.role,
+  studentId: user.studentId || null,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
 
 /**
- * @desc    Register a new student
+ * @desc    Initiate student registration & issue institutional email OTP
  * @route   POST /api/v1/auth/register
  * @access  Public
  */
 export const register = async (req, res, next) => {
   try {
     const rawName = req.body.name || req.body.fullName;
-    const { email, password } = req.body;
+    const { email, password, studentId } = req.body;
 
     // 1. Validate required fields
     if (!rawName || !email || !password) {
@@ -63,8 +93,8 @@ export const register = async (req, res, next) => {
     const trimmedName = rawName.trim();
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 3. Domain validation (@coeptech.ac.in)
-    if (!COEP_EMAIL_REGEX.test(normalizedEmail)) {
+    // 3. Institutional domain validation (@coeptech.ac.in)
+    if (!isInstitutionalEmail(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: 'Only official college email addresses (@coeptech.ac.in) are permitted.',
@@ -87,48 +117,301 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // 5. Check if user already exists
+    // 5. Check if verified user already exists
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        message: 'A student account with this email already exists.',
+        message: 'A student account with this email already exists. Please sign in.',
         error: {
           code: 'CONFLICT',
-          message: 'A student account with this email already exists.',
+          message: 'A student account with this email already exists. Please sign in.',
         },
       });
     }
 
-    // 6. Hash password with bcrypt salt rounds = 10
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 6. Generate cryptographically secure 6-digit OTP
+    const otp = generateNumericOtp();
+    const otpHash = hashOtp(otp);
 
-    // 7. Persist user with enforced default role 'student' (ignore client role input)
-    const newUser = await User.create({
+    // 7. Hash password before saving to challenge (salt rounds = 10)
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // 8. Challenge validity: 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const clientIp = req.ip || req.headers['x-forwarded-for'] || null;
+
+    // 9. Upsert short-lived registration challenge
+    await RegistrationChallenge.findOneAndUpdate(
+      { email: normalizedEmail },
+      {
+        name: trimmedName,
+        email: normalizedEmail,
+        passwordHash,
+        studentId: studentId ? String(studentId).trim() : null,
+        otpHash,
+        attempts: 0,
+        expiresAt,
+        lastResendAt: new Date(),
+        $inc: { resendCount: 1 },
+        clientIp,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // 10. Dispatch OTP via backend email service
+    await sendRegistrationOtpEmail({
+      to: normalizedEmail,
       name: trimmedName,
-      email: normalizedEmail,
-      password: hashedPassword,
+      otp,
+      expiryMinutes: 10,
+    });
+
+    // 11. Return success response (NEVER expose OTP or issue JWT yet)
+    return res.status(200).json({
+      success: true,
+      message: 'A verification code has been sent to your institutional email address.',
+      data: {
+        email: normalizedEmail,
+        expiresInSeconds: 600,
+        cooldownSeconds: 60,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * @desc    Verify OTP, atomically consume challenge, and activate verified student account
+ * @route   POST /api/v1/auth/verify-email
+ * @access  Public
+ */
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Institutional email and 6-digit verification code are required.',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Email and verification code are required.',
+        },
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const cleanOtp = String(otp).trim();
+
+    // 1. Look up pending challenge
+    const challenge = await RegistrationChallenge.findOne({ email: normalizedEmail });
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'No pending registration found for this email, or the verification request has expired.',
+        error: {
+          code: 'CHALLENGE_NOT_FOUND',
+          message: 'No pending registration found. Please register again.',
+        },
+      });
+    }
+
+    // 2. Check if challenge has expired
+    if (challenge.isExpired()) {
+      await RegistrationChallenge.deleteOne({ _id: challenge._id });
+      return res.status(410).json({
+        success: false,
+        message: 'Your verification code has expired. Please request a new code.',
+        error: {
+          code: 'OTP_EXPIRED',
+          message: 'Verification code expired.',
+        },
+      });
+    }
+
+    // 3. Brute-force protection: check attempt limits (max 5)
+    if (challenge.attempts >= challenge.maxAttempts) {
+      await RegistrationChallenge.deleteOne({ _id: challenge._id });
+      return res.status(429).json({
+        success: false,
+        message: 'Maximum verification attempts exceeded. Your verification session has been terminated for security. Please register again.',
+        error: {
+          code: 'MAX_ATTEMPTS_EXCEEDED',
+          message: 'Maximum verification attempts exceeded.',
+        },
+      });
+    }
+
+    // 4. Timing-safe verification of OTP hash
+    const isOtpValid = verifyOtpHash(cleanOtp, challenge.otpHash);
+
+    if (!isOtpValid) {
+      // Increment failed attempts counter
+      challenge.attempts += 1;
+      await challenge.save();
+
+      const remainingAttempts = Math.max(0, challenge.maxAttempts - challenge.attempts);
+
+      if (remainingAttempts === 0) {
+        await RegistrationChallenge.deleteOne({ _id: challenge._id });
+        return res.status(429).json({
+          success: false,
+          message: 'Invalid code. Maximum attempts exceeded. Please register again.',
+          error: {
+            code: 'MAX_ATTEMPTS_EXCEEDED',
+            message: 'Maximum attempts exceeded.',
+            remainingAttempts: 0,
+          },
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: `Invalid verification code. ${remainingAttempts} attempt(s) remaining.`,
+        error: {
+          code: 'INVALID_OTP',
+          message: `Invalid verification code. ${remainingAttempts} attempt(s) remaining.`,
+          remainingAttempts,
+        },
+      });
+    }
+
+    // 5. Atomic Consumption: Remove challenge so it cannot be reused
+    await RegistrationChallenge.deleteOne({ _id: challenge._id });
+
+    // 6. Defensive check: Ensure user wasn't registered concurrently
+    const concurrentUser = await User.findOne({ email: normalizedEmail });
+    if (concurrentUser) {
+      const token = generateToken(concurrentUser._id, concurrentUser.role);
+      return res.status(200).json({
+        success: true,
+        message: 'Account is already verified and active.',
+        token,
+        user: sanitizeUser(concurrentUser),
+      });
+    }
+
+    // 7. Persist verified student user (password already hashed)
+    const newUser = await User.create({
+      name: challenge.name,
+      email: challenge.email,
+      password: challenge.passwordHash,
+      studentId: challenge.studentId,
       role: 'student',
     });
 
     // 8. Generate 24h JWT
     const token = generateToken(newUser._id, newUser.role);
 
-    // 9. Return HTTP 201 with token and safe sanitized user object
+    // 9. Return HTTP 201 with auth token and safe user profile
     return res.status(201).json({
       success: true,
-      message: 'Student registered successfully',
+      message: 'Institutional email verified successfully. Welcome to CampusFix!',
       token,
       user: sanitizeUser(newUser),
     });
   } catch (error) {
-    // Pass duplicate-key error or others to centralized error handler
     return next(error);
   }
 };
 
 /**
- * @desc    Login student
+ * @desc    Resend OTP to institutional email with 60-second cooldown enforcement
+ * @route   POST /api/v1/auth/resend-otp
+ * @access  Public
+ */
+export const resendOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required.',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Email is required.',
+        },
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Look up pending challenge
+    const challenge = await RegistrationChallenge.findOne({ email: normalizedEmail });
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'No pending registration found for this email. Please register again.',
+        error: {
+          code: 'CHALLENGE_NOT_FOUND',
+          message: 'No pending registration found.',
+        },
+      });
+    }
+
+    // 2. Enforce 60-second resend cooldown
+    if (!challenge.canResend(60000)) {
+      const remainingSeconds = challenge.getRemainingCooldownSeconds(60000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${remainingSeconds} seconds before requesting a new verification code.`,
+        error: {
+          code: 'COOLDOWN_ACTIVE',
+          message: `Please wait ${remainingSeconds} seconds before requesting a new code.`,
+          remainingSeconds,
+        },
+      });
+    }
+
+    // 3. Limit excessive resends per challenge (max 5 resends)
+    if (challenge.resendCount >= 5) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many verification code requests for this email. Please restart registration later.',
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many verification code requests.',
+        },
+      });
+    }
+
+    // 4. Generate new OTP and reset attempts
+    const newOtp = generateNumericOtp();
+    const newOtpHash = hashOtp(newOtp);
+
+    challenge.otpHash = newOtpHash;
+    challenge.attempts = 0; // Fresh attempt counter for new code
+    challenge.expiresAt = new Date(Date.now() + 10 * 60 * 1000); // Reset 10m window
+    challenge.lastResendAt = new Date();
+    challenge.resendCount += 1;
+    await challenge.save();
+
+    // 5. Send fresh email
+    await sendRegistrationOtpEmail({
+      to: normalizedEmail,
+      name: challenge.name,
+      otp: newOtp,
+      expiryMinutes: 10,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'A new verification code has been sent to your institutional email.',
+      data: {
+        expiresInSeconds: 600,
+        cooldownSeconds: 60,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+/**
+ * @desc    Login student / staff / admin (Normal Login - NO OTP REQUIRED)
  * @route   POST /api/v1/auth/login
  * @access  Public
  */
@@ -181,7 +464,7 @@ export const login = async (req, res, next) => {
     // 5. Generate 24h JWT
     const token = generateToken(user._id, user.role);
 
-    // 6. Return response with token and sanitized user
+    // 6. Return response with token and sanitized user (NO OTP REQUIRED FOR NORMAL LOGIN)
     return res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -200,7 +483,6 @@ export const login = async (req, res, next) => {
  */
 export const getMe = async (req, res, next) => {
   try {
-    // req.user is set by authMiddleware
     if (!req.user) {
       return res.status(401).json({
         success: false,

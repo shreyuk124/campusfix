@@ -1,5 +1,11 @@
 import mongoose from 'mongoose';
 
+/**
+ * Issue Schema
+ * 
+ * Represents a student-reported campus maintenance or safety problem.
+ * Priority scores have been removed for a clean, reportCount-driven model.
+ */
 const issueSchema = new mongoose.Schema(
   {
     refId: {
@@ -50,15 +56,6 @@ const issueSchema = new mongoose.Schema(
       enum: ['Reported', 'Assigned', 'In Progress', 'Resolved', 'Closed', 'Reopened'],
       default: 'Reported',
     },
-    priorityScore: {
-      type: Number,
-      default: 0,
-    },
-    priorityBand: {
-      type: String,
-      enum: ['Low', 'Medium', 'High', 'Critical'],
-      default: 'Low',
-    },
     reportCount: {
       type: Number,
       default: 1,
@@ -67,6 +64,11 @@ const issueSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    assignedTeam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
     },
     resolvedAt: {
       type: Date,
@@ -78,11 +80,6 @@ const issueSchema = new mongoose.Schema(
     },
     closedAt: {
       type: Date,
-      default: null,
-    },
-    assignedTeam: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Team',
       default: null,
     },
   },

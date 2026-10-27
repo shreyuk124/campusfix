@@ -6,6 +6,7 @@ import { Category } from '../models/Category.js';
 import { Building } from '../models/Building.js';
 import { User } from '../models/User.js';
 import { Team } from '../models/Team.js';
+import { uploadToCloudinary } from '../config/cloudinary.js';
 
 /**
  * Helper: Escapes special characters in string for safe RegExp queries
@@ -118,7 +119,7 @@ export const createIssue = async (req, res, next) => {
 
     const photoUrls =
       req.files && req.files.length > 0
-        ? req.files.map((file) => `/uploads/${file.filename}`)
+        ? await Promise.all(req.files.map((file) => uploadToCloudinary(file.path, file.filename)))
         : [];
 
     // Step 2: Validate required form inputs

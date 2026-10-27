@@ -65,18 +65,18 @@ export function FilterBar({
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Primary Bar: Search, Mobile Filters Trigger & Quick Sort */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 sm:gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted">
-            <Search size={16} />
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted">
+            <Search size={17} />
           </div>
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by issue title, reference ID, room, or problem..."
-            className="block h-10 sm:h-11 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-9 text-sm text-ink placeholder:text-muted transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            placeholder="Search issues by keyword..."
+            className="block h-11 w-full rounded-lg border border-line-strong bg-surface pl-10 pr-9 text-sm text-ink placeholder:text-muted/80 shadow-xs transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
           />
           {searchInput && (
             <button
@@ -85,7 +85,7 @@ export function FilterBar({
                 setSearchInput('');
                 handleChange('search', '');
               }}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted hover:text-ink"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted hover:text-ink cursor-pointer"
               aria-label="Clear search"
             >
               <X size={15} />
@@ -93,13 +93,13 @@ export function FilterBar({
           )}
         </div>
 
-        {/* Right actions: Mobile Filter Button & Desktop Controls */}
-        <div className="flex items-center gap-2">
-          {/* Mobile Filter Button (<1024px) */}
+        {/* Right actions: Dropdown Selects & Sort Controls */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Mobile Filter Button (<768px) */}
           <button
             type="button"
             onClick={() => setIsMobileSheetOpen(true)}
-            className="flex lg:hidden flex-1 sm:flex-none items-center justify-center gap-2 h-10 px-3.5 rounded-lg border border-line-strong bg-surface text-sm font-medium text-ink hover:bg-brand-50 hover:border-brand-300 transition-colors"
+            className="flex md:hidden flex-1 sm:flex-none items-center justify-center gap-2 h-11 px-3.5 rounded-lg border border-line-strong bg-surface text-sm font-medium text-ink shadow-xs hover:bg-brand-50 hover:border-brand-300 transition-colors cursor-pointer"
           >
             <SlidersHorizontal size={16} className="text-muted" />
             <span>Filters</span>
@@ -110,13 +110,13 @@ export function FilterBar({
             )}
           </button>
 
-          {/* Desktop Selects (≥1024px) */}
-          <div className="hidden lg:flex items-center gap-2">
+          {/* Desktop Selects (≥768px matching screenshot) */}
+          <div className="hidden md:flex items-center gap-2">
             {/* Building Dropdown */}
             <select
               value={filters.building}
               onChange={(e) => handleChange('building', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
+              className="h-11 rounded-lg border border-line-strong bg-surface pl-3 pr-8 text-xs sm:text-sm font-medium text-ink shadow-xs focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Filter by building"
             >
               <option value="all">All Buildings</option>
@@ -131,7 +131,7 @@ export function FilterBar({
             <select
               value={filters.category}
               onChange={(e) => handleChange('category', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
+              className="h-11 rounded-lg border border-line-strong bg-surface pl-3 pr-8 text-xs sm:text-sm font-medium text-ink shadow-xs focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Filter by category"
             >
               <option value="all">All Categories</option>
@@ -147,7 +147,7 @@ export function FilterBar({
               <select
                 value={filters.status}
                 onChange={(e) => handleChange('status', e.target.value)}
-                className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-9 text-xs sm:text-sm text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
+                className="h-11 rounded-lg border border-line-strong bg-surface pl-3 pr-8 text-xs sm:text-sm font-medium text-ink shadow-xs focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
                 aria-label="Filter by status"
               >
                 <option value="all">All Statuses</option>
@@ -165,12 +165,12 @@ export function FilterBar({
             <select
               value={filters.sort || 'newest'}
               onChange={(e) => handleChange('sort', e.target.value)}
-              className="h-10 rounded-lg border border-line-strong bg-surface pl-3 pr-8 text-xs sm:text-sm font-medium text-ink focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
+              className="h-11 rounded-lg border border-line-strong bg-surface pl-3 pr-8 text-xs sm:text-sm font-medium text-ink shadow-xs focus:border-brand-500 focus:ring-brand-100 cursor-pointer"
               aria-label="Sort issues by"
             >
-              <option value="newest">Sort: Newest first</option>
-              <option value="most-affected">Sort: Most affected (+1)</option>
-              <option value="oldest">Sort: Oldest first</option>
+              <option value="newest">Newest first</option>
+              <option value="most-affected">Most affected (+1)</option>
+              <option value="oldest">Oldest first</option>
             </select>
           </div>
         </div>

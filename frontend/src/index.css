@@ -47,3 +47,75 @@
     }
   }
 }
+
+/* Micro-interaction & Stagger Animation Keyframes */
+@keyframes feedCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatUpFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.85);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.15);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -24px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(0.9);
+  }
+}
+
+@keyframes springBounce {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-feed-card {
+  animation: feedCardIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+.animate-float-up {
+  animation: floatUpFade 0.75s ease-out forwards;
+}
+
+.animate-spring-bounce {
+  animation: springBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.animate-shimmer {
+  animation: shimmerSweep 1.2s ease-in-out infinite;
+}

@@ -9,6 +9,14 @@ export const authApi = {
     const response = await api.post('/auth/register', userData);
     return response.data;
   },
+  verifyEmail: async (data) => {
+    const response = await api.post('/auth/verify-email', data);
+    return response.data;
+  },
+  resendOtp: async (data) => {
+    const response = await api.post('/auth/resend-otp', data);
+    return response.data;
+  },
   getCurrentUser: async () => {
     const response = await api.get('/auth/me');
     return response.data;
@@ -18,3 +26,5 @@ export const authApi = {
     return response.data;
   },
 };
+
+export default authApi;

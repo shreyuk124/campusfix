@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Wrench,
   GraduationCap,
@@ -11,6 +11,10 @@ import {
   ShieldCheck,
   UserPlus,
   X,
+  Mail,
+  KeyRound,
+  RotateCw,
+  ArrowLeft,
 } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
 import { registerSchema } from '../../lib/validation';
@@ -21,15 +25,27 @@ import AuthNotice from './AuthNotice';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register: registerAuthUser, user, logout } = useAuth();
+  const location = useLocation();
+  const { register: registerAuthUser, verifyEmail, resendOtp, user, logout } = useAuth();
 
+  // Multi-step lifecycle: 'form' -> 'otp' -> 'success'
+  const [step, setStep] = useState('form');
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
 
+  // OTP State
+  const [otpValue, setOtpValue] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [resendNotice, setResendNotice] = useState('');
+  const otpInputRef = useRef(null);
+
+  // Form Setup
   const {
     register,
     handleSubmit,
@@ -51,34 +67,128 @@ export default function RegisterPage() {
 
   const passwordValue = useWatch({ control, name: 'password', defaultValue: '' });
 
+  // Handle countdown timer for OTP resend cooldown
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  // Auto-focus OTP input when entering OTP screen
+  useEffect(() => {
+    if (step === 'otp') {
+      setTimeout(() => {
+        otpInputRef.current?.focus();
+      }, 150);
+    }
+  }, [step]);
+
+  // Support seamless transition from LandingPage signup form
+  useEffect(() => {
+    if (location.state?.email) {
+      setPendingEmail(location.state.email.trim().toLowerCase());
+      if (location.state.name) setRegisteredName(location.state.name);
+      setStep('otp');
+      setCooldown(60);
+    }
+  }, [location.state]);
 
   const handleQuickFill = () => {
     setServerError('');
     clearErrors();
     setValue('fullName', 'Priya Sharma', { shouldValidate: true });
-    setValue('email', 'priya.sharma@campus.edu', { shouldValidate: true });
+    setValue('email', 'priya.sharma@coeptech.ac.in', { shouldValidate: true });
     setValue('studentId', 'STU-2026-8819', { shouldValidate: true });
     setValue('password', 'CampusPass2026!', { shouldValidate: true });
     setValue('confirmPassword', 'CampusPass2026!', { shouldValidate: true });
     setValue('acceptTerms', true, { shouldValidate: true });
   };
 
-  const onSubmit = async (data) => {
+  /**
+   * Step 1: Submit initial registration form -> Triggers OTP dispatch
+   */
+  const onFormSubmit = async (data) => {
     setServerError('');
     try {
-      const newUser = await registerAuthUser({
+      await registerAuthUser({
         fullName: data.fullName,
         email: data.email,
         password: data.password,
         studentId: data.studentId,
       });
 
-      setRegisteredName(newUser.name || data.fullName);
-      setIsSuccess(true);
+      setRegisteredName(data.fullName);
+      setPendingEmail(data.email.trim().toLowerCase());
+      setStep('otp');
+      setCooldown(60); // 60s cooldown for resend
     } catch (err) {
       const message =
         err.response?.data?.message ||
-        'Registration could not be completed. Please check your information or try again.';
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Registration could not be completed. Please check your information and try again.';
+      setServerError(message);
+    }
+  };
+
+  /**
+   * Step 2: Submit 6-digit OTP -> Activates student account
+   */
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!otpValue || otpValue.trim().length !== 6) {
+      setServerError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setServerError('');
+    setIsVerifying(true);
+
+    try {
+      await verifyEmail({
+        email: pendingEmail,
+        otp: otpValue.trim(),
+      });
+
+      setIsVerifying(false);
+      setStep('success');
+    } catch (err) {
+      setIsVerifying(false);
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error?.message ||
+        err.message ||
+        'Verification failed. Please check the code and try again.';
+      setServerError(message);
+    }
+  };
+
+  /**
+   * Resend OTP Action with Cooldown
+   */
+  const handleResendOtp = async () => {
+    if (cooldown > 0 || isResending) return;
+
+    setServerError('');
+    setResendNotice('');
+    setIsResending(true);
+
+    try {
+      const res = await resendOtp({ email: pendingEmail });
+      setIsResending(false);
+      setCooldown(60);
+      setOtpValue('');
+      setResendNotice(res.message || 'A fresh verification code has been dispatched to your email.');
+    } catch (err) {
+      setIsResending(false);
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error?.message ||
+        'Unable to resend verification code right now. Please wait.';
       setServerError(message);
     }
   };
@@ -93,18 +203,20 @@ export default function RegisterPage() {
           {/* Header */}
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
-              <Wrench size={24} aria-hidden="true" />
+              {step === 'otp' ? <Mail size={24} aria-hidden="true" /> : <Wrench size={24} aria-hidden="true" />}
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-ink">
-              Create Student Account
+              {step === 'otp' ? 'Verify Institutional Email' : 'Create Student Account'}
             </h1>
             <p className="mt-1 text-sm text-muted">
-              Join CampusFix to report issues and track campus improvements
+              {step === 'otp'
+                ? `Enter the 6-digit security code sent to ${pendingEmail}`
+                : 'Join CampusFix to report issues and track campus improvements'}
             </p>
           </div>
 
           {/* Already logged-in banner */}
-          {user && !isSuccess && (
+          {user && step === 'form' && (
             <div className="mb-6 rounded-lg border border-brand-200 bg-brand-50 p-4 text-sm text-brand-700">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -117,7 +229,7 @@ export default function RegisterPage() {
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => navigate(user.role === 'admin' ? '/admin' : '/')}
+                    onClick={() => navigate(user.role === 'admin' ? '/admin' : '/feed')}
                   >
                     Go to {user.role === 'admin' ? 'Admin' : 'Feed'}
                   </Button>
@@ -133,72 +245,61 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Role Clarification Callout per DESIGN.md §5.1 */}
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-line bg-surface-muted p-3 text-xs text-muted">
-            <GraduationCap size={16} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
-            <p>
-              <strong>Students Only:</strong> Campus registration is for students. Administrator
-              accounts are provisioned directly by campus IT management.
-            </p>
-          </div>
+          {/* Failed Registration / Server Error Alert */}
+          {serverError && (
+            <div
+              role="alert"
+              className="mb-5 flex items-start gap-3 rounded-lg border border-danger-border bg-danger-50 p-3.5 text-sm text-danger animate-in fade-in"
+            >
+              <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <div className="flex-1">
+                <p className="font-medium text-danger">{serverError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setServerError('')}
+                className="text-danger hover:opacity-80"
+                aria-label="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
-          {/* Success Screen */}
-          {isSuccess ? (
+          {/* Resend Success Notice */}
+          {resendNotice && (
             <div
               role="status"
-              className="my-4 rounded-lg border border-success-border bg-success-bg p-6 text-center animate-in fade-in zoom-in-95 duration-200"
+              className="mb-5 flex items-start gap-3 rounded-lg border border-success-border bg-success-50 p-3 text-xs text-teal-700 animate-in fade-in"
             >
-              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-teal text-white">
-                <CheckCircle2 size={32} aria-hidden="true" />
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-teal-600" aria-hidden="true" />
+              <div className="flex-1">
+                <p>{resendNotice}</p>
               </div>
-              <h2 className="text-xl font-bold text-teal-700">Account Created Successfully</h2>
-              <p className="mt-2 text-sm text-body">
-                Welcome, <strong>{registeredName}</strong>! Your student account is active.
-                You can now report broken facilities, upvote recurring issues, and receive resolution updates.
-              </p>
-
-              <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => navigate('/')}
-                >
-                  Go to Campus Feed
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => navigate('/report')}
-                >
-                  Report an Issue
-                </Button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setResendNotice('')}
+                className="text-teal-700 hover:opacity-80"
+              >
+                <X size={14} />
+              </button>
             </div>
-          ) : (
-            <>
-              {/* Failed Registration / Server Error Alert */}
-              {serverError && (
-                <div
-                  role="alert"
-                  className="mb-5 flex items-start gap-3 rounded-lg border border-danger-border bg-danger-50 p-3.5 text-sm text-danger animate-in fade-in"
-                >
-                  <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
-                  <div className="flex-1">
-                    <p className="font-medium text-danger">{serverError}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setServerError('')}
-                    className="text-danger hover:opacity-80"
-                    aria-label="Dismiss error"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
+          )}
 
-              {/* Registration Form */}
-              <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+          {/* ------------------------------------------------------------- */}
+          {/* STEP 1: INITIAL REGISTRATION FORM                             */}
+          {/* ------------------------------------------------------------- */}
+          {step === 'form' && (
+            <>
+              {/* Role Clarification Callout */}
+              <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-line bg-surface-muted p-3 text-xs text-muted">
+                <GraduationCap size={16} className="mt-0.5 shrink-0 text-brand-600" aria-hidden="true" />
+                <p>
+                  <strong>Institutional Requirement:</strong> Account registration requires an official university email ending in <strong>@coeptech.ac.in</strong>. A verification code will be dispatched to confirm your identity.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit(onFormSubmit)} noValidate className="space-y-4">
                 {/* Full Name */}
                 <div>
                   <Input
@@ -220,12 +321,12 @@ export default function RegisterPage() {
                   <Input
                     {...register('email')}
                     id="register-email"
-                    label="University Email"
+                    label="Institutional Email"
                     type="email"
                     required
                     autoComplete="email"
-                    placeholder="priya.sharma@campus.edu"
-                    helperText="Must be a valid campus email address"
+                    placeholder="name@coeptech.ac.in"
+                    helperText="Must be your official @coeptech.ac.in address"
                     error={errors.email?.message}
                     disabled={isSubmitting}
                   />
@@ -236,10 +337,10 @@ export default function RegisterPage() {
                   <Input
                     {...register('studentId')}
                     id="register-studentId"
-                    label="Student ID (Optional)"
+                    label="Student PRN / ID (Optional)"
                     type="text"
                     autoComplete="off"
-                    placeholder="e.g. STU-2026-8819"
+                    placeholder="e.g. 112103045"
                     helperText="Helps verify student identity and department access"
                     error={errors.studentId?.message}
                     disabled={isSubmitting}
@@ -267,7 +368,6 @@ export default function RegisterPage() {
                       />
                     }
                   />
-                  {/* Dynamic Password Strength Indicator */}
                   <PasswordStrengthMeter password={passwordValue} />
                 </div>
 
@@ -317,7 +417,7 @@ export default function RegisterPage() {
                   )}
                 </div>
 
-                {/* Privacy Reminder per DESIGN.md §9 */}
+                {/* Privacy Guarantee */}
                 <div className="rounded-md bg-brand-50/50 p-2.5 text-[11px] text-muted flex items-start gap-2 border border-brand-100">
                   <ShieldCheck size={14} className="shrink-0 text-brand-500 mt-0.5" />
                   <span>
@@ -336,11 +436,11 @@ export default function RegisterPage() {
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
-                      <span>Creating student account...</span>
+                      <span>Sending verification code...</span>
                     ) : (
                       <>
                         <UserPlus size={16} aria-hidden="true" />
-                        <span>Create Student Account</span>
+                        <span>Continue to Email Verification</span>
                       </>
                     )}
                   </Button>
@@ -349,19 +449,155 @@ export default function RegisterPage() {
             </>
           )}
 
+          {/* ------------------------------------------------------------- */}
+          {/* STEP 2: OTP VERIFICATION SCREEN                               */}
+          {/* ------------------------------------------------------------- */}
+          {step === 'otp' && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3.5 text-xs text-brand-800 flex items-start gap-2.5">
+                <Mail size={16} className="shrink-0 text-brand-600 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-brand-900">Verification code dispatched</p>
+                  <p>
+                    Please check your institutional inbox at <strong>{pendingEmail}</strong>. Enter the 6-digit numeric code below.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div>
+                  <label htmlFor="otp-input" className="block text-xs font-semibold text-ink uppercase tracking-wider mb-2">
+                    6-Digit Security Code
+                  </label>
+                  <div className="relative">
+                    <input
+                      ref={otpInputRef}
+                      id="otp-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={otpValue}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOtpValue(val);
+                      }}
+                      placeholder="······"
+                      aria-label="6-digit verification code"
+                      className="w-full text-center text-3xl font-mono font-bold tracking-[0.5em] py-3.5 px-4 rounded-xl border-2 border-line bg-surface text-ink focus:border-brand-500 focus:ring-4 focus:ring-brand-100 transition-all outline-none"
+                      disabled={isVerifying}
+                      autoComplete="one-time-code"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted text-center">
+                    Code expires in 10 minutes · Single use only
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={isVerifying}
+                  disabled={isVerifying || otpValue.length !== 6}
+                >
+                  {isVerifying ? (
+                    <span>Verifying code...</span>
+                  ) : (
+                    <>
+                      <KeyRound size={16} aria-hidden="true" />
+                      <span>Verify & Activate Account</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Resend & Back Controls */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('form');
+                    setServerError('');
+                  }}
+                  className="inline-flex items-center gap-1 font-medium text-muted hover:text-ink transition-colors"
+                >
+                  <ArrowLeft size={14} />
+                  <span>Change email / Edit details</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={cooldown > 0 || isResending}
+                  className={`inline-flex items-center gap-1 font-medium transition-colors ${
+                    cooldown > 0 || isResending
+                      ? 'text-muted cursor-not-allowed opacity-60'
+                      : 'text-brand-600 hover:text-brand-700 hover:underline'
+                  }`}
+                >
+                  <RotateCw size={14} className={isResending ? 'animate-spin' : ''} />
+                  <span>
+                    {cooldown > 0 ? `Resend code (${cooldown}s)` : isResending ? 'Sending...' : 'Resend Code'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ------------------------------------------------------------- */}
+          {/* STEP 3: SUCCESS CONFIRMATION                                  */}
+          {/* ------------------------------------------------------------- */}
+          {step === 'success' && (
+            <div
+              role="status"
+              className="my-4 rounded-lg border border-success-border bg-success-bg p-6 text-center animate-in fade-in zoom-in-95 duration-200"
+            >
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-teal text-white">
+                <CheckCircle2 size={32} aria-hidden="true" />
+              </div>
+              <h2 className="text-xl font-bold text-teal-700">Account Verified Successfully!</h2>
+              <p className="mt-2 text-sm text-body">
+                Welcome to CampusFix, <strong>{registeredName}</strong>! Your institutional email has been confirmed.
+                You are now signed in and ready to report facilities issues across campus.
+              </p>
+
+              <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => navigate('/feed')}
+                >
+                  <span>Go to Campus Feed</span>
+                  <ArrowRight size={14} className="ml-1" />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => navigate('/report')}
+                >
+                  Report an Issue
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Footer Navigation Link to Login */}
-          <div className="mt-6 border-t border-line pt-4 text-center">
-            <p className="text-sm text-muted">
-              Already have an account?{' '}
-              <Link
-                to="/login"
-                className="font-medium text-brand-600 hover:text-brand-700 hover:underline inline-flex items-center gap-0.5"
-              >
-                <span>Sign in</span>
-                <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </p>
-          </div>
+          {step === 'form' && (
+            <div className="mt-6 border-t border-line pt-4 text-center">
+              <p className="text-sm text-muted">
+                Already have an account?{' '}
+                <Link
+                  to="/login"
+                  className="font-medium text-brand-600 hover:text-brand-700 hover:underline inline-flex items-center gap-0.5"
+                >
+                  <span>Sign in</span>
+                  <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              </p>
+            </div>
+          )}
         </Card>
       </div>
     </div>

@@ -25,10 +25,10 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem(STORAGE_KEY_TOKEN);
     if (token) {
       authApi.getCurrentUser()
-        .then((userData) => {
+        .then((data) => {
           setIsBackendConnected(true);
           // Extract the clean student user object from the response
-          const loggedInUser = userData?.user || userData;
+          const loggedInUser = data?.user || data;
           if (loggedInUser && (loggedInUser.email || loggedInUser.name)) {
             setUser(loggedInUser);
             localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(loggedInUser));
@@ -44,9 +44,6 @@ export function AuthProvider({ children }) {
   const login = async ({ email, password, role = 'student' }) => {
     setIsLoading(true);
 
-    // Artificial brief network delay for realistic loading state
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
     if (simulateFailure) {
       setIsLoading(false);
       const error = new Error('Email or password is incorrect');
@@ -59,7 +56,7 @@ export function AuthProvider({ children }) {
 
     try {
       // 1. Attempt live backend login
-      const data = await authApi.login({ email, password, role });
+      const data = await authApi.login({ email: email.trim().toLowerCase(), password, role });
       setIsBackendConnected(true);
       const authenticatedUser = data.user || {
         id: data.id || 'usr-live-01',
@@ -113,67 +110,67 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * Initiate student registration -> Dispatches OTP to institutional email
+   */
   const register = async ({ fullName, name, email, password, studentId, role = 'student' }) => {
     const studentName = fullName || name;
     setIsLoading(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    if (simulateFailure) {
-      setIsLoading(false);
-      const error = new Error('Registration failed');
-      error.response = {
-        status: 400,
-        data: { message: 'An account with this email address already exists. Please sign in instead.' },
-      };
-      throw error;
-    }
 
     try {
       const data = await authApi.register({
         name: studentName,
         fullName: studentName,
-        email,
+        email: email.trim().toLowerCase(),
         password,
         studentId,
-        role,
+        role: 'student',
       });
       setIsBackendConnected(true);
-      const newUser = data.user || {
-        id: data.id || `usr-${role}-new`,
-        name: studentName,
-        fullName: studentName,
-        email,
-        role: data.role || role,
-      };
-      setUser(newUser);
-      localStorage.setItem(STORAGE_KEY_TOKEN, data.token || 'mock-jwt-token');
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
       setIsLoading(false);
-      return newUser;
+      return {
+        requiresOtp: true,
+        email: email.trim().toLowerCase(),
+        message: data.message,
+        data: data.data,
+      };
     } catch (err) {
-      if (err.response && err.response.status >= 400 && err.response.status < 500) {
-        setIsLoading(false);
-        throw err;
-      }
-
-      setIsBackendConnected(false);
-      const mockUser = {
-        id: `usr-${role}-` + Math.floor(100 + Math.random() * 900),
-        name: studentName,
-        fullName: studentName,
-        email,
-        studentId: studentId || 'N/A',
-        role,
-        isMock: true,
-      };
-
-      setUser(mockUser);
-      localStorage.setItem(STORAGE_KEY_TOKEN, 'mock-prototype-jwt-token');
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
       setIsLoading(false);
-      return mockUser;
+      throw err;
     }
+  };
+
+  /**
+   * Verify email OTP and activate student account
+   */
+  const verifyEmail = async ({ email, otp }) => {
+    setIsLoading(true);
+
+    try {
+      const data = await authApi.verifyEmail({
+        email: email.trim().toLowerCase(),
+        otp: String(otp).trim(),
+      });
+      setIsBackendConnected(true);
+      const authenticatedUser = data.user;
+      setUser(authenticatedUser);
+      localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(authenticatedUser));
+      setIsLoading(false);
+      return authenticatedUser;
+    } catch (err) {
+      setIsLoading(false);
+      throw err;
+    }
+  };
+
+  /**
+   * Resend OTP with cooldown enforcement
+   */
+  const resendOtp = async ({ email }) => {
+    return await authApi.resendOtp({
+      email: email.trim().toLowerCase(),
+    });
   };
 
   const logout = async () => {
@@ -204,6 +201,8 @@ export function AuthProvider({ children }) {
         isBackendConnected,
         login,
         register,
+        verifyEmail,
+        resendOtp,
         logout,
       }}
     >
@@ -211,3 +210,5 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+export default AuthProvider;

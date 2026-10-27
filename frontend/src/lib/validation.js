@@ -7,11 +7,11 @@ export const loginSchema = z.object({
   email: z
     .string()
     .min(1, 'Email address is required')
-    .email('Please enter a valid university email address (e.g. name@university.edu)'),
+    .email('Please enter a valid email address'),
   password: z
     .string()
     .min(1, 'Password is required')
-    .min(8, 'Password must be at least 8 characters'),
+    .min(6, 'Password must be at least 6 characters'),
 });
 
 export const registerSchema = z
@@ -24,8 +24,14 @@ export const registerSchema = z
       .regex(/^[a-zA-Z\s.'-]+$/, 'Name can only contain letters, spaces, and hyphens'),
     email: z
       .string()
-      .min(1, 'University email is required')
-      .email('Please enter a valid university email address (e.g. name@university.edu)'),
+      .min(1, 'Institutional email is required')
+      .email('Please enter a valid email address')
+      .refine(
+        (val) => val.trim().toLowerCase().endsWith('@coeptech.ac.in'),
+        {
+          message: 'Only official college email addresses (@coeptech.ac.in) are permitted',
+        }
+      ),
     studentId: z
       .string()
       .optional()
@@ -33,9 +39,7 @@ export const registerSchema = z
     password: z
       .string()
       .min(1, 'Password is required')
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Za-z]/, 'Password must include at least one letter')
-      .regex(/[0-9]/, 'Password must include at least one number'),
+      .min(6, 'Password must be at least 6 characters'),
     confirmPassword: z.string().min(1, 'Please confirm your password'),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: 'You must agree to the Campus Honor Code and Terms of Service',

@@ -373,16 +373,18 @@ export default function LandingPage() {
                     </p>
 
                     {/* 1-Click Demo Fill Action */}
-                    <button
-                      type="button"
-                      onClick={handleQuickFill}
-                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/90 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
-                    >
-                      <Zap size={14} className="text-brand-600 fill-brand-600" />
-                      <span>
-                        1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : 'Student'})
-                      </span>
-                    </button>
+                    {selectedRole === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={handleQuickFill}
+                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/90 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+                      >
+                        <Zap size={14} className="text-brand-600 fill-brand-600" />
+                        <span>
+                          1-Click Demo Fill (Admin)
+                        </span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   /* Sign Up is strictly for Students */

@@ -106,7 +106,7 @@ export default function LoginPage() {
     <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center py-6 sm:py-10">
       <div className="w-full max-w-[440px]">
         {/* Prototype & Security Notice Banner */}
-        <AuthNotice onQuickFill={handleQuickFill} role={selectedRole} isRegister={false} />
+        <AuthNotice onQuickFill={selectedRole === 'admin' ? handleQuickFill : undefined} role={selectedRole} isRegister={false} />
 
         <Card className="shadow-modal">
           {/* Brand & Page Header */}
@@ -219,14 +219,16 @@ export default function LoginPage() {
                     : 'Report broken campus facilities, vote, and track resolution timelines.'}
                 </p>
 
-                <button
-                  type="button"
-                  onClick={handleQuickFill}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
-                >
-                  <Zap size={14} className="text-brand-600" />
-                  <span>1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : 'Student'})</span>
-                </button>
+                {selectedRole === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={handleQuickFill}
+                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+                  >
+                    <Zap size={14} className="text-brand-600" />
+                    <span>1-Click Demo Fill (Admin)</span>
+                  </button>
+                )}
               </div>
 
               {/* Failed-Login State / Server Error Alert */}

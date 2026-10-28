@@ -5,12 +5,36 @@ import { issuesApi } from '../../api/issues';
 const STORAGE_KEY = 'campusfix_coep_issues_v2';
 
 /**
+ * Extracts current authenticated user from local storage
+ */
+function getCurrentAuthUser() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('campusfix_auth_user') : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Normalizes an API issue document into a consistent frontend issue shape.
+ * Dynamically resolves isReporter based on the authenticated user's ID.
  */
 function normalizeIssue(doc) {
   if (!doc) return null;
   const id = String(doc._id || doc.id || doc.refId);
   const refId = doc.refId || doc.referenceId || `CF-${id.slice(-5)}`;
+
+  const currentUser = getCurrentAuthUser();
+  const currentUserId = currentUser?._id || currentUser?.id;
+  const createdById = typeof doc.createdBy === 'object'
+    ? doc.createdBy?._id || doc.createdBy?.id
+    : doc.createdBy;
+
+  const isReporter = Boolean(
+    (currentUserId && createdById && String(createdById) === String(currentUserId)) ||
+    (doc.isReporter && (!createdById || String(createdById) === String(currentUserId)))
+  );
 
   return {
     _id: id,
@@ -34,7 +58,7 @@ function normalizeIssue(doc) {
     status: doc.status || 'Reported',
     affectedCount: doc.reportCount ?? doc.affectedCount ?? 1,
     hasJoined: Boolean(doc.hasJoined),
-    isReporter: Boolean(doc.isReporter),
+    isReporter,
     isHotspot: Boolean(doc.isHotspot),
     assignedTeam:
       doc.assignedTeam?.name ||
@@ -67,6 +91,27 @@ function normalizeIssue(doc) {
 class IssuesService {
   constructor() {
     this.init();
+  }
+
+  getCurrentUser() {
+    return getCurrentAuthUser();
+  }
+
+  getCurrentUserId() {
+    const user = getCurrentAuthUser();
+    return user?._id || user?.id || null;
+  }
+
+  clearUserCache() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
+  }
+
+  normalizeIssue(doc) {
+    return normalizeIssue(doc);
   }
 
   init() {
@@ -132,7 +177,6 @@ class IssuesService {
             localMap.get(norm.title.toLowerCase().trim());
           if (existing) {
             norm.hasJoined = existing.hasJoined || false;
-            norm.isReporter = existing.isReporter || false;
             if (existing.assignedStaff)
               norm.assignedStaff = existing.assignedStaff;
             if (existing.timeline && existing.timeline.length > 1) {
@@ -178,11 +222,12 @@ class IssuesService {
     // Sync from live MongoDB Atlas backend
     let items = await this.syncWithBackend();
 
-    // Tab filter for My Issues
+    // Tab filter for My Issues (strictly isolated to currently authenticated user)
+    const currentUserId = this.getCurrentUserId();
     if (tab === 'my-active') {
       items = items.filter(
         (item) =>
-          (item.isReporter || item.hasJoined) &&
+          item.isReporter &&
           ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(
             item.status
           )
@@ -194,7 +239,7 @@ class IssuesService {
     ) {
       items = items.filter(
         (item) =>
-          (item.isReporter || item.hasJoined) &&
+          item.isReporter &&
           ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
       );
     }
@@ -373,6 +418,7 @@ class IssuesService {
       })
       .filter(Boolean);
 
+    const currentUserId = this.getCurrentUserId();
     const newIssue = {
       _id: realId,
       id: realId,
@@ -389,6 +435,7 @@ class IssuesService {
       affectedCount: 1,
       hasJoined: false,
       isReporter: true,
+      createdBy: currentUserId,
       assignedTeam: 'Unassigned',
       assignedStaff: '',
       createdAt: new Date().toISOString(),

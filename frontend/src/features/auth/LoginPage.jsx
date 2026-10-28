@@ -84,12 +84,10 @@ export default function LoginPage() {
 
       // Brief delay to display success state before routing
       setTimeout(() => {
-        if (fromLocation) {
-          navigate(fromLocation, { replace: true });
-        } else if (loggedUser.role === 'admin') {
+        if (loggedUser.role === 'admin') {
           navigate('/admin', { replace: true });
-        } else if (loggedUser.role === 'staff') {
-          navigate('/staff', { replace: true });
+        } else if (fromLocation && fromLocation !== '/report' && fromLocation !== '/') {
+          navigate(fromLocation, { replace: true });
         } else {
           navigate('/feed', { replace: true });
         }
@@ -136,9 +134,9 @@ export default function LoginPage() {
                   <Button
                     size="sm"
                     variant="primary"
-                    onClick={() => navigate(user.role === 'admin' ? '/admin' : user.role === 'staff' ? '/staff' : '/feed')}
+                    onClick={() => navigate(user.role === 'admin' ? '/admin' : '/feed')}
                   >
-                    Go to {user.role === 'admin' ? 'Admin' : user.role === 'staff' ? 'Staff Portal' : 'Feed'}
+                    Go to {user.role === 'admin' ? 'Admin Portal' : 'Feed'}
                   </Button>
                   <Button
                     size="sm"

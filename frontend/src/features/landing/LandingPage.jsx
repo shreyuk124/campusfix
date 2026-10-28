@@ -129,10 +129,10 @@ export default function LandingPage() {
     const r = (role || 'student').toLowerCase();
     if (r === 'admin') {
       navigate('/admin', { replace: true });
-    } else if (r === 'staff') {
-      navigate('/staff', { replace: true });
+    } else if (fromLocation && fromLocation !== '/report' && fromLocation !== '/') {
+      navigate(fromLocation, { replace: true });
     } else {
-      navigate(fromLocation || '/feed', { replace: true });
+      navigate('/feed', { replace: true });
     }
   };
 

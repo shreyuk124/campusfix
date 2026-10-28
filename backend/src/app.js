@@ -11,10 +11,39 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Enable Cross-Origin requests from the frontend
+// Enable Cross-Origin requests from the frontend (Vercel, localhost, and configured CLIENT_URL)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+];
+
+if (process.env.CLIENT_URL) {
+  process.env.CLIENT_URL.split(',').forEach((url) => {
+    const clean = url.trim().replace(/\/+$/, '');
+    if (clean) allowedOrigins.push(clean);
+  });
+}
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow non-browser clients (curl, Postman, health checks)
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.trim().replace(/\/+$/, '');
+      let isVercel = false;
+      try {
+        isVercel = /\.vercel\.app$/.test(new URL(origin).hostname);
+      } catch {
+        isVercel = false;
+      }
+
+      if (allowedOrigins.includes(cleanOrigin) || isVercel) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );

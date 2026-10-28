@@ -133,7 +133,7 @@ export default function Navbar() {
                 )}
               </NavLink>
 
-              <NavLink to="/settings" className="relative flex items-center py-6 px-1 text-sm transition-colors">
+              <NavLink to="/report" className="relative flex items-center py-6 px-1 text-sm transition-colors">
                 {({ isActive }) => (
                   <>
                     <span
@@ -141,7 +141,7 @@ export default function Navbar() {
                         isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'
                       }`}
                     >
-                      Notifications
+                      Report Issue
                     </span>
                     {isActive && (
                       <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
@@ -272,14 +272,6 @@ export default function Navbar() {
                     </span>
                   </div>
                   <div className="pt-1 space-y-0.5">
-                    <Link
-                      to="/settings"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-body hover:bg-surface-muted"
-                    >
-                      <User size={13} />
-                      <span>Account Settings</span>
-                    </Link>
                     <button
                       type="button"
                       onClick={handleLogout}

@@ -30,8 +30,8 @@ export function BottomNav() {
             </NavLink>
 
             <NavLink to="/report" className={getTabClass}>
-              <PlusCircle size={22} className="mb-0.5 text-action" />
-              <span className="font-semibold text-action">Report</span>
+              <PlusCircle size={22} className="mb-0.5 text-brand-600" />
+              <span className="font-semibold text-brand-600">Report</span>
             </NavLink>
 
             <NavLink to="/my-issues" className={getTabClass}>

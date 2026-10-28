@@ -1,15 +1,21 @@
+import 'dotenv/config';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 
-// Configure Cloudinary from environment variables
-const isCloudinaryConfigured = Boolean(
-  (process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET) ||
-    process.env.CLOUDINARY_URL
-);
+let isConfigured = false;
 
-if (isCloudinaryConfigured) {
+function ensureCloudinary() {
+  if (isConfigured) return true;
+
+  const hasConfig = Boolean(
+    (process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET) ||
+      process.env.CLOUDINARY_URL
+  );
+
+  if (!hasConfig) return false;
+
   if (process.env.CLOUDINARY_URL) {
     cloudinary.config();
   } else {
@@ -20,6 +26,9 @@ if (isCloudinaryConfigured) {
       secure: true,
     });
   }
+
+  isConfigured = true;
+  return true;
 }
 
 /**
@@ -31,7 +40,9 @@ if (isCloudinaryConfigured) {
  * @returns {Promise<string>} Permanent HTTPS URL or local /uploads/filename
  */
 export async function uploadToCloudinary(localFilePath, filename) {
-  if (!isCloudinaryConfigured) {
+  const ready = ensureCloudinary();
+  if (!ready) {
+    console.warn('[Cloudinary] Keys missing in process.env, saving locally to /uploads');
     return `/uploads/${filename}`;
   }
 
@@ -41,7 +52,7 @@ export async function uploadToCloudinary(localFilePath, filename) {
       public_id: filename.replace(/\.[^/.]+$/, ''),
       resource_type: 'image',
       transformation: [
-        { quality: 'auto', fetch_format: 'auto' }, // Automatic compression & modern format
+        { quality: 'auto', fetch_format: 'auto' },
       ],
     });
 
@@ -61,4 +72,4 @@ export async function uploadToCloudinary(localFilePath, filename) {
   }
 }
 
-export { cloudinary, isCloudinaryConfigured };
+export { cloudinary };

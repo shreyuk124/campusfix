@@ -12,9 +12,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Enable Cross-Origin requests from the frontend
+const configuredClientUrl = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.trim().replace(/\/+$/, '')
+  : null;
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      if (
+        !configuredClientUrl ||
+        configuredClientUrl === '*' ||
+        cleanOrigin === configuredClientUrl ||
+        cleanOrigin === 'http://localhost:5173' ||
+        cleanOrigin === 'http://localhost:5174' ||
+        cleanOrigin.endsWith('.vercel.app')
+      ) {
+        return callback(null, cleanOrigin);
+      }
+      return callback(null, cleanOrigin);
+    },
     credentials: true,
   })
 );

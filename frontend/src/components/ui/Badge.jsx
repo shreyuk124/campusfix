@@ -43,13 +43,15 @@ export function StatusBadge({ status, className = '' }) {
     }
   };
 
+  const isSolid = status === 'Assigned' || status === 'In Progress' || status === 'Resolved' || status === 'Reopened';
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${className}`}
       style={{
         backgroundColor: config.bg,
         color: config.text,
-        border: `1px solid ${config.border || 'transparent'}`,
+        border: isSolid ? 'none' : `1px solid ${config.border || 'transparent'}`,
       }}
     >
       {renderIcon()}
@@ -59,46 +61,53 @@ export function StatusBadge({ status, className = '' }) {
 }
 
 /**
- * PriorityBadge - Pill with dot/icon + label
- * Low (0–29), Medium (30–54), High (55–74), Critical (75+)
- * Rule from DESIGN.md: Critical is solid red, the only solid-fill badge
+ * PriorityBadge - Pill matching campus_feed_redesign.jpg
+ * High: Solid Action Orange (#EA580C) with white text
+ * Medium: Subtle slate (#F1F5F9) with dark text
+ * Critical: Solid Red (#EF4444)
+ * Low: Subtle slate
  */
-export function PriorityBadge({ priority, score, className = '' }) {
+export function PriorityBadge({ priority, score, showScore = false, className = '' }) {
   let band = null;
   if (score !== undefined && score !== null) {
     band = PRIORITY_BANDS.find((b) => score >= b.min && score <= b.max);
   }
   if (!band && priority) {
+    const pStr = String(priority).toLowerCase();
     band = PRIORITY_BANDS.find(
       (b) =>
-        b.label.toLowerCase() === String(priority).toLowerCase() ||
-        b.key.toLowerCase() === String(priority).toLowerCase()
+        b.key.toLowerCase() === pStr ||
+        b.label.toLowerCase() === pStr ||
+        b.label.toLowerCase().includes(pStr) ||
+        pStr.includes(b.key.toLowerCase())
     );
   }
   if (!band) {
     band = PRIORITY_BANDS[1] || PRIORITY_BANDS[0];
   }
 
-  const isCritical = band.key === 'critical';
+  const isSolid = band.key === 'high' || band.key === 'critical';
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-        isCritical ? 'animate-pulse font-bold tracking-wide' : ''
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+        band.key === 'critical' ? 'animate-pulse font-bold' : ''
       } ${className}`}
       style={{
         backgroundColor: band.bg,
         color: band.fg,
-        border: isCritical ? 'none' : `1px solid ${band.fg}33`,
+        border: isSolid ? 'none' : `1px solid #CBD5E1`,
       }}
     >
-      <span
-        className="h-1.5 w-1.5 rounded-full shrink-0"
-        style={{ backgroundColor: band.dot }}
-        aria-hidden="true"
-      />
+      {!isSolid && band.dot && (
+        <span
+          className="h-1.5 w-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: band.dot }}
+          aria-hidden="true"
+        />
+      )}
       <span>{band.label}</span>
-      {score !== undefined && score !== null && (
+      {showScore && score !== undefined && score !== null && (
         <span className="font-mono text-[10px] opacity-80">({score})</span>
       )}
     </span>

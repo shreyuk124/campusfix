@@ -106,9 +106,6 @@ const BUILDINGS_DATA = [
   { name: 'COEP Canteen / Meta Canteen', code: 'CAN', campus: 'south' },
   { name: 'North Academic Block', code: 'NAB', campus: 'north' },
   { name: 'South Academic Block', code: 'SAB', campus: 'south' },
-  { name: 'Hostel Block A', code: 'HBA', campus: 'south' },
-  { name: 'Hostel Block B', code: 'HBB', campus: 'south' },
-  { name: 'Hostel Block C', code: 'HBC', campus: 'south' },
 ];
 
 /**
@@ -213,10 +210,9 @@ export async function seedDatabase() {
     // 5. Seed Initial Sample Issues
     const sampleCount = await Issue.countDocuments();
     if (sampleCount === 0) {
-      const hostelA = buildingMap.get('Hostel Block A') || Array.from(buildingMap.values())[0];
-      const library = buildingMap.get('Central Library') || Array.from(buildingMap.values())[1];
-      const compDept = buildingMap.get('Computer Engineering & IT Building') || Array.from(buildingMap.values())[2];
-      const academicComplex = buildingMap.get('Academic Complex') || Array.from(buildingMap.values())[3];
+      const library = buildingMap.get('Central Library') || Array.from(buildingMap.values())[0];
+      const compDept = buildingMap.get('Computer Engineering & IT Building') || Array.from(buildingMap.values())[1];
+      const academicComplex = buildingMap.get('Academic Complex') || Array.from(buildingMap.values())[2];
 
       const plumbingCat = categoryMap.get('plumbing');
       const wifiCat = categoryMap.get('wifi');
@@ -226,11 +222,11 @@ export async function seedDatabase() {
       const sampleIssues = [
         {
           refId: 'CF-10291',
-          title: 'Water leaking near Block A washroom',
+          title: 'Water leaking in Academic Complex washroom',
           category: plumbingCat ? plumbingCat._id : null,
-          building: hostelA._id,
-          campus: 'south',
-          locationText: 'Block A · 2nd Floor · Washroom 204',
+          building: academicComplex._id,
+          campus: 'north',
+          locationText: 'Academic Complex · 2nd Floor · Washroom 204',
           description: 'Overhead flush pipe is constantly leaking onto the corridor floor.',
           status: 'In Progress',
           priorityScore: 55,

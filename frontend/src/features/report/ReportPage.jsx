@@ -164,6 +164,7 @@ export default function ReportPage() {
     setIsSubmitting(true);
     let refId = null;
     let realMongoId = null;
+    let serverPhotos = null;
     const finalTitle = description.slice(0, 60).trim();
 
     try {
@@ -185,6 +186,7 @@ export default function ReportPage() {
       const serverIssue = response?.data?.data || response?.data || response;
       realMongoId = serverIssue._id;
       refId = serverIssue.refId || refId;
+      serverPhotos = Array.isArray(serverIssue?.photos) && serverIssue.photos.length > 0 ? serverIssue.photos : null;
     } catch (apiError) {
       console.error('API submission failed:', apiError);
       const errorMsg =
@@ -208,7 +210,7 @@ export default function ReportPage() {
       campus: location.campus,
       building: location.building,
       location: specificLocation.trim(),
-      photos,
+      photos: serverPhotos || photos,
     });
 
     sessionStorage.removeItem(DRAFT_STORAGE_KEY);

@@ -181,6 +181,7 @@ export function AuthProvider({ children }) {
     } finally {
       localStorage.removeItem(STORAGE_KEY_TOKEN);
       localStorage.removeItem(STORAGE_KEY_USER);
+      localStorage.removeItem('campusfix_coep_issues_v2');
       setUser(null);
     }
   };

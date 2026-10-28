@@ -211,40 +211,12 @@ export default function LandingPage() {
       <header className="border-b border-line bg-surface/90 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
-              {/* Collegiate Classical Pediment Building */}
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="translate-y-[-0.5px]"
-              >
-                <path d="M4 10h16M4 14h16M4 18h16" />
-                <path d="M6 10v8M10 10v8M14 10v8M18 10v8" />
-                <path d="M3 10l9-7 9 7v1H3v-1z" />
-                <path d="M2 21h20v-2H2v2z" />
-              </svg>
-              {/* Mini Orange Checkmark Badge */}
-              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-action text-white ring-2 ring-surface">
-                <Check size={10} strokeWidth={3.5} />
-              </span>
-            </div>
-
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
+              <Wrench size={22} strokeWidth={2.2} />
+            </span>
             <div>
-              <div className="flex items-baseline font-display">
-                <span className="text-xl sm:text-2xl font-bold tracking-tight text-brand-500">
-                  Campus
-                </span>
-                <span className="text-xl sm:text-2xl font-bold tracking-tight text-action">
-                  Fix
-                </span>
-              </div>
-              <p className="text-[11px] text-muted hidden sm:block -mt-0.5">
+              <span className="text-xl font-bold tracking-tight text-ink">CampusFix</span>
+              <p className="text-[11px] text-muted hidden sm:block">
                 Campus Infrastructure &amp; Maintenance Resolution
               </p>
             </div>
@@ -306,7 +278,7 @@ export default function LandingPage() {
                     onClick={() => navigateByRole(user.role)}
                     className="gap-2"
                   >
-                    <span>Continue to {user.role === 'admin' ? 'Authority Portal' : user.role === 'staff' ? 'Staff Portal' : 'Student Feed'}</span>
+                    <span>Continue to {user.role === 'admin' ? 'Authority Portal' : 'Student Feed'}</span>
                     <ArrowRight size={16} />
                   </Button>
                 </div>
@@ -366,7 +338,7 @@ export default function LandingPage() {
                     <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-muted">
                       Select Your Role
                     </label>
-                    <div className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-surface-muted p-1">
+                    <div className="grid grid-cols-2 gap-1 rounded-lg border border-line bg-surface-muted p-1">
                       <button
                         type="button"
                         onClick={() => handleRoleChange('student')}
@@ -378,19 +350,6 @@ export default function LandingPage() {
                       >
                         <GraduationCap size={15} />
                         <span>Student</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRoleChange('staff')}
-                        className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-xs font-semibold transition-all ${
-                          selectedRole === 'staff'
-                            ? 'bg-surface text-brand-600 shadow-xs border border-line/50'
-                            : 'text-muted hover:text-ink'
-                        }`}
-                      >
-                        <HardHat size={15} />
-                        <span>Staff</span>
                       </button>
 
                       <button
@@ -408,11 +367,9 @@ export default function LandingPage() {
                     </div>
 
                     <p className="mt-1.5 text-[11px] text-muted">
-                      {selectedRole === 'student'
-                        ? 'Students report issues, upvote active complaints, and track repairs.'
-                        : selectedRole === 'staff'
-                        ? 'Facilities staff receive assigned tasks and view issue queues.'
-                        : 'Estate authorities triage tickets, dispatch crews, and oversee campus repairs.'}
+                      {selectedRole === 'admin'
+                        ? 'Estate authorities triage tickets, dispatch crews, and oversee campus repairs.'
+                        : 'Students report issues, upvote active complaints, and track repairs.'}
                     </p>
 
                     {/* 1-Click Demo Fill Action */}
@@ -423,7 +380,7 @@ export default function LandingPage() {
                     >
                       <Zap size={14} className="text-brand-600 fill-brand-600" />
                       <span>
-                        1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'})
+                        1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : 'Student'})
                       </span>
                     </button>
                   </div>
@@ -464,16 +421,12 @@ export default function LandingPage() {
                         label={
                           selectedRole === 'admin'
                             ? 'Admin Email Address'
-                            : selectedRole === 'staff'
-                            ? 'Staff Email Address'
                             : 'Student University Email'
                         }
                         required
                         placeholder={
                           selectedRole === 'admin'
                             ? 'admin@campusfix.edu'
-                            : selectedRole === 'staff'
-                            ? 'staff@campusfix.edu'
                             : 'alex.student@campus.edu'
                         }
                         error={loginErrors.email?.message}
@@ -518,7 +471,7 @@ export default function LandingPage() {
                       >
                         <Lock size={15} />
                         <span>
-                          Sign In as {selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'}
+                          Sign In as {selectedRole === 'admin' ? 'Admin' : 'Student'}
                         </span>
                       </Button>
                     </div>

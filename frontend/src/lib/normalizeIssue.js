@@ -7,7 +7,9 @@ export function normalizeIssue(raw, index = 0) {
   if (!raw) return null;
 
   const rawBuilding = raw.building?.name || raw.building || 'Campus Facility';
-  const inferredCampus = raw.campus || 'Campus';
+  const inferredCampus =
+    raw.campus ||
+    (String(rawBuilding).toLowerCase().includes('hostel') ? 'Hostel' : 'College');
 
   return {
     id: String(raw.id || raw._id || `cf-${index + 1}`),

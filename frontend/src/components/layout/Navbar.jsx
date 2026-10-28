@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
+  Wrench,
   Compass,
   Inbox,
-  Bell,
-  Plus,
-  Shield,
   LayoutDashboard,
+  PlusCircle,
+  Shield,
   User,
   LogOut,
   Menu,
   X,
-  Check,
 } from 'lucide-react';
 import { useAuth } from '../../features/auth/useAuth';
 
@@ -19,138 +18,68 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const handleLogout = async () => {
     setMobileMenuOpen(false);
-    setProfileDropdownOpen(false);
     await logout();
     navigate('/', { replace: true });
   };
+
+  const navLinkClass = ({ isActive }) =>
+    `inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-brand-50 text-brand-600 font-bold'
+        : 'text-muted hover:text-ink hover:bg-surface-muted'
+    }`;
+
+  const mobileNavLinkClass = ({ isActive }) =>
+    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-brand-50 text-brand-600 font-bold'
+        : 'text-muted hover:text-ink hover:bg-surface-muted'
+    }`;
 
   // Role booleans
   const isAdmin = user?.role === 'admin';
   const isStaff = user?.role === 'staff';
   const isStudent = !isAdmin && !isStaff;
 
-  const userInitials = user?.name
-    ? user.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : 'AW';
-
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-surface/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 sm:h-[70px] max-w-content items-center justify-between px-4 sm:px-6">
-        {/* Brand Logo Lockup — Collegiate squircle + Check badge */}
+    <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-content items-center justify-between px-4 sm:px-6">
+        {/* Brand Logo - links to role home */}
         <Link
           to={isAdmin ? '/admin' : isStaff ? '/staff' : '/feed'}
           onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg group"
+          className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg"
         >
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs transition-transform group-hover:scale-105">
-            {/* Collegiate Classical Pediment Building */}
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="translate-y-[-0.5px]"
-            >
-              <path d="M4 10h16M4 14h16M4 18h16" />
-              <path d="M6 10v8M10 10v8M14 10v8M18 10v8" />
-              <path d="M3 10l9-7 9 7v1H3v-1z" />
-              <path d="M2 21h20v-2H2v2z" />
-            </svg>
-            {/* Mini Orange Checkmark Badge */}
-            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-action-orange text-white ring-2 ring-surface">
-              <Check size={10} strokeWidth={3.5} />
-            </span>
-          </div>
-
-          <div className="flex items-baseline font-display">
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-brand-500">
-              Campus
-            </span>
-            <span className="text-xl sm:text-2xl font-bold tracking-tight text-action">
-              Fix
-            </span>
-            <span className="hidden md:inline-block ml-2 text-[10px] font-bold uppercase tracking-wider text-muted bg-surface-muted border border-line px-1.5 py-0.5 rounded">
-              {isAdmin ? 'Admin' : isStaff ? 'Staff' : 'Campus'}
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
+            <Wrench size={20} strokeWidth={2.25} />
+          </span>
+          <div>
+            <span className="text-lg font-bold tracking-tight text-ink">CampusFix</span>
+            <span className="hidden sm:inline-block ml-2 text-[10px] font-semibold text-brand-600 bg-brand-50 border border-brand-200 px-1.5 py-0.2 rounded">
+              {isAdmin ? 'Admin' : isStaff ? 'Staff' : 'Student'}
             </span>
           </div>
         </Link>
 
-        {/* Center Navigation Links (Matching campus_feed_redesign.jpg active tab indicator) */}
-        <nav className="hidden lg:flex items-center gap-6">
+        {/* Desktop Navigation - Strictly Role-Based */}
+        <nav className="hidden lg:flex items-center gap-1">
           {/* STUDENT NAVIGATION */}
           {isStudent && (
             <>
-              <NavLink to="/feed" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={`font-semibold ${
-                        isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'
-                      }`}
-                    >
-                      Campus Feed
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/feed" className={navLinkClass}>
+                <Compass size={16} />
+                <span>Campus Feed</span>
               </NavLink>
-
-              <NavLink to="/my-issues" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={`font-semibold ${
-                        isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'
-                      }`}
-                    >
-                      My Reports
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/my-issues" className={navLinkClass}>
+                <Inbox size={16} />
+                <span>My Reports</span>
               </NavLink>
-
-              <NavLink to="/settings" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span
-                      className={`font-semibold ${
-                        isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'
-                      }`}
-                    >
-                      Notifications
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/report" className={navLinkClass}>
+                <PlusCircle size={16} />
+                <span>Report Issue</span>
               </NavLink>
             </>
           )}
@@ -158,52 +87,13 @@ export default function Navbar() {
           {/* ADMIN NAVIGATION */}
           {isAdmin && (
             <>
-              <NavLink to="/admin" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span className={`font-semibold ${isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'}`}>
-                      Operations & Triage
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/admin" className={navLinkClass}>
+                <Shield size={16} />
+                <span>Operations & Triage</span>
               </NavLink>
-
-              <NavLink to="/dashboard" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span className={`font-semibold ${isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'}`}>
-                      Analytics Dashboard
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
-              </NavLink>
-
-              <NavLink to="/feed" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span className={`font-semibold ${isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'}`}>
-                      Campus Feed
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/dashboard" className={navLinkClass}>
+                <LayoutDashboard size={16} />
+                <span>Analytics Dashboard</span>
               </NavLink>
             </>
           )}
@@ -211,117 +101,62 @@ export default function Navbar() {
           {/* STAFF NAVIGATION */}
           {isStaff && (
             <>
-              <NavLink to="/staff" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span className={`font-semibold ${isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'}`}>
-                      Assigned Tasks
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/staff" className={navLinkClass}>
+                <User size={16} />
+                <span>Assigned Tasks</span>
               </NavLink>
-
-              <NavLink to="/feed" className="relative flex items-center py-6 px-1 text-sm transition-colors">
-                {({ isActive }) => (
-                  <>
-                    <span className={`font-semibold ${isActive ? 'text-ink font-bold' : 'text-muted hover:text-ink'}`}>
-                      Campus Feed
-                    </span>
-                    {isActive && (
-                      <span className="absolute bottom-0 inset-x-0 flex flex-col items-center">
-                        <span className="h-[3px] w-full bg-brand-500 rounded-full" />
-                        <span className="h-1.5 w-1.5 rounded-full bg-brand-500 -mt-1" />
-                      </span>
-                    )}
-                  </>
-                )}
+              <NavLink to="/feed" className={navLinkClass}>
+                <Compass size={16} />
+                <span>Campus Feed</span>
               </NavLink>
             </>
           )}
         </nav>
 
-        {/* Right Stack: User Initials Avatar | Vertical Divider | + Report Issue CTA */}
-        <div className="flex items-center gap-3">
+        {/* User Profile, Logout & Mobile Menu Button */}
+        <div className="flex items-center gap-2">
           {user ? (
-            <div className="relative flex items-center gap-2.5">
-              {/* User Avatar Circle */}
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 font-bold text-xs shadow-xs border border-brand-200"
+                title={user?.email || 'User'}
+              >
+                {user?.name
+                  ? user.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase()
+                  : 'U'}
+              </div>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-semibold text-ink leading-tight">
+                  {user?.name || 'User'}
+                </span>
+                <span className="text-[10px] font-medium text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200 self-start mt-0.5 capitalize">
+                  {user?.role || 'Student'}
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-200 bg-white text-xs font-bold text-brand-500 shadow-xs hover:border-brand-500 transition-colors cursor-pointer"
-                title={`${user?.name || 'Account'} (${user?.role || 'Student'})`}
-                aria-label="User Account Menu"
+                onClick={handleLogout}
+                title="Log out"
+                className="hidden sm:inline-flex items-center gap-1 rounded-md border border-line px-2.5 py-1 text-xs font-medium text-muted hover:bg-surface-muted hover:text-ink transition-colors cursor-pointer"
               >
-                {userInitials}
+                <LogOut size={13} />
+                <span>Log out</span>
               </button>
-
-              {/* Profile Dropdown Menu */}
-              {profileDropdownOpen && (
-                <div className="absolute right-0 top-12 w-52 rounded-xl border border-line bg-surface p-2 shadow-modal animate-in fade-in-50 duration-100 z-50">
-                  <div className="px-3 py-2 border-b border-line">
-                    <p className="text-xs font-bold text-ink truncate">{user?.name || 'Student'}</p>
-                    <p className="text-[11px] text-muted truncate">{user?.email}</p>
-                    <span className="inline-block mt-1 text-[10px] font-semibold text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded border border-brand-200 uppercase">
-                      {user?.role || 'student'}
-                    </span>
-                  </div>
-                  <div className="pt-1 space-y-0.5">
-                    <Link
-                      to="/settings"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-body hover:bg-surface-muted"
-                    >
-                      <User size={13} />
-                      <span>Account Settings</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-danger hover:bg-danger-50 cursor-pointer"
-                    >
-                      <LogOut size={13} />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Thin Vertical Divider Line */}
-              <div className="hidden sm:block h-6 w-px bg-line-strong/60" />
-
-              {/* Primary Action Button ("+ Report Issue") */}
-              <Link
-                to="/report"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-action px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-action-hover transition-colors"
-              >
-                <Plus size={16} strokeWidth={2.5} />
-                <span>Report Issue</span>
-              </Link>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                to="/login"
-                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-body hover:bg-surface-muted"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-lg bg-brand-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-brand-600"
-              >
-                Sign Up
-              </Link>
-            </div>
+            <Link
+              to="/"
+              className="rounded-md bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-brand-600"
+            >
+              Sign In
+            </Link>
           )}
 
-          {/* Mobile Hamburger Toggle (<1024px) */}
+          {/* Mobile Hamburger Toggle */}
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -333,15 +168,15 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation (<1024px) */}
+      {/* Mobile Dropdown Menu (<1024px) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-line bg-surface p-4 space-y-2 shadow-lg animate-in slide-in-from-top-2 duration-150">
+        <div className="lg:hidden border-t border-line bg-surface p-4 space-y-1.5 shadow-lg animate-in slide-in-from-top-2 duration-150">
           {isStudent && (
             <>
               <NavLink
                 to="/feed"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50 hover:text-brand-600"
+                className={mobileNavLinkClass}
               >
                 <Compass size={18} />
                 <span>Campus Feed</span>
@@ -349,7 +184,7 @@ export default function Navbar() {
               <NavLink
                 to="/my-issues"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50 hover:text-brand-600"
+                className={mobileNavLinkClass}
               >
                 <Inbox size={18} />
                 <span>My Reports</span>
@@ -357,9 +192,9 @@ export default function Navbar() {
               <NavLink
                 to="/report"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-bold bg-action text-white hover:bg-action-hover"
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-bold bg-brand-500 text-white hover:bg-brand-600 transition-colors"
               >
-                <Plus size={18} strokeWidth={2.5} />
+                <PlusCircle size={18} />
                 <span>Report Issue</span>
               </NavLink>
             </>
@@ -370,7 +205,7 @@ export default function Navbar() {
               <NavLink
                 to="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50"
+                className={mobileNavLinkClass}
               >
                 <Shield size={18} />
                 <span>Operations & Triage</span>
@@ -378,7 +213,7 @@ export default function Navbar() {
               <NavLink
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50"
+                className={mobileNavLinkClass}
               >
                 <LayoutDashboard size={18} />
                 <span>Analytics Dashboard</span>
@@ -391,7 +226,7 @@ export default function Navbar() {
               <NavLink
                 to="/staff"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50"
+                className={mobileNavLinkClass}
               >
                 <User size={18} />
                 <span>Assigned Tasks</span>
@@ -399,7 +234,7 @@ export default function Navbar() {
               <NavLink
                 to="/feed"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-body hover:bg-brand-50"
+                className={mobileNavLinkClass}
               >
                 <Compass size={18} />
                 <span>Campus Feed</span>
@@ -408,7 +243,7 @@ export default function Navbar() {
           )}
 
           {user && (
-            <div className="pt-2 border-t border-line">
+            <div className="pt-2 border-t border-line/60">
               <button
                 type="button"
                 onClick={handleLogout}

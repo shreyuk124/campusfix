@@ -178,7 +178,7 @@ export default function LoginPage() {
                 <div
                   role="tablist"
                   aria-label="Select role to sign in as"
-                  className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-surface-muted p-1"
+                  className="grid grid-cols-2 gap-1 rounded-lg border border-line bg-surface-muted p-1"
                 >
                   <button
                     type="button"
@@ -199,22 +199,6 @@ export default function LoginPage() {
                   <button
                     type="button"
                     role="tab"
-                    id="role-tab-staff"
-                    aria-selected={selectedRole === 'staff'}
-                    onClick={() => handleRoleChange('staff')}
-                    className={`flex items-center justify-center gap-1.5 rounded-md py-2.5 text-xs sm:text-sm font-medium transition-all ${
-                      selectedRole === 'staff'
-                        ? 'bg-surface text-brand-600 shadow-sm font-semibold'
-                        : 'text-muted hover:text-ink'
-                    }`}
-                  >
-                    <HardHat size={16} aria-hidden="true" />
-                    <span>Staff</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    role="tab"
                     id="role-tab-admin"
                     aria-selected={selectedRole === 'admin'}
                     onClick={() => handleRoleChange('admin')}
@@ -230,11 +214,9 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-1.5 text-xs text-muted">
-                  {selectedRole === 'student'
-                    ? 'Report broken campus facilities, vote, and track resolution timelines.'
-                    : selectedRole === 'staff'
-                    ? 'Review assigned maintenance tasks, update progress, and mark resolved.'
-                    : 'Manage issue triage, assign resolution teams, and monitor SLAs.'}
+                  {selectedRole === 'admin'
+                    ? 'Manage issue triage, assign resolution teams, and monitor SLAs.'
+                    : 'Report broken campus facilities, vote, and track resolution timelines.'}
                 </p>
 
                 <button
@@ -243,7 +225,7 @@ export default function LoginPage() {
                   className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
                 >
                   <Zap size={14} className="text-brand-600" />
-                  <span>1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'})</span>
+                  <span>1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : 'Student'})</span>
                 </button>
               </div>
 
@@ -281,8 +263,6 @@ export default function LoginPage() {
                     label={
                       selectedRole === 'admin'
                         ? 'Admin Email Address'
-                        : selectedRole === 'staff'
-                        ? 'Staff Email Address'
                         : 'University Email Address'
                     }
                     type="email"
@@ -291,15 +271,11 @@ export default function LoginPage() {
                     placeholder={
                       selectedRole === 'admin'
                         ? 'admin@campusfix.edu'
-                        : selectedRole === 'staff'
-                        ? 'staff@campusfix.edu'
                         : 'student@university.edu'
                     }
                     helperText={
                       selectedRole === 'admin'
                         ? 'Use your university-issued administrative credentials'
-                        : selectedRole === 'staff'
-                        ? 'Assigned facilities/maintenance email'
                         : 'Official student email address'
                     }
                     error={errors.email?.message}
@@ -347,12 +323,7 @@ export default function LoginPage() {
                       <>
                         <Lock size={16} aria-hidden="true" />
                         <span>
-                          Sign In as{' '}
-                          {selectedRole === 'admin'
-                            ? 'Admin'
-                            : selectedRole === 'staff'
-                            ? 'Staff'
-                            : 'Student'}
+                          Sign In as {selectedRole === 'admin' ? 'Admin' : 'Student'}
                         </span>
                       </>
                     )}

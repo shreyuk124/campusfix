@@ -6,6 +6,7 @@ import {
   updateIssueStatus,
 } from '../controllers/reportController.js';
 import { uploadIssuePhotos } from '../middlewares/uploadMiddleware.js';
+import { protect } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
@@ -15,11 +16,13 @@ router.get('/similar', getSimilarIssues);
 
 // POST /api/v1/issues
 // Submits a new issue with optional photo evidence files (0-3 photos)
-router.post('/', uploadIssuePhotos, createIssue);
+// Protected: requires authenticated session and strictly attributes ownership to req.user
+router.post('/', protect, uploadIssuePhotos, createIssue);
 
 // POST /api/v1/issues/:id/reports
 // Upvotes / re-reports an existing issue ("I'm facing this too")
-router.post('/:id/reports', upvoteIssue);
+// Protected: requires authenticated session and strictly attributes report to req.user
+router.post('/:id/reports', protect, upvoteIssue);
 
 // PATCH /api/v1/issues/:id/status
 // Authority & maintenance workflow: transition issue status & add resolution notes

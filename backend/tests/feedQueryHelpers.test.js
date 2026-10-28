@@ -99,7 +99,7 @@ describe('Member 3: feedQueryHelpers Unit Tests', () => {
     test('handles priority sort correctly', () => {
       const { sortKey, sortObj } = parseSort('priority');
       assert.equal(sortKey, 'priority');
-      assert.deepEqual(sortObj, { priorityScore: -1, createdAt: -1 });
+      assert.deepEqual(sortObj, { reportCount: -1, createdAt: -1 });
     });
 
     test('handles overdue sort contract', () => {

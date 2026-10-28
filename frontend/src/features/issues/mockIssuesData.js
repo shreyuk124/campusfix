@@ -66,7 +66,7 @@ export const INITIAL_ISSUES = [
     isHotspot: false,
     affectedCount: 32,
     hasJoined: false,
-    isReporter: true, // Current user reported this
+    isReporter: false,
     assignedTeam: 'Electrical Works Team',
     assignedStaff: 'Anil Desai',
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3h ago

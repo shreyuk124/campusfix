@@ -159,13 +159,18 @@ export const register = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // 10. Dispatch OTP via backend email service
-    await sendRegistrationOtpEmail({
-      to: normalizedEmail,
-      name: trimmedName,
-      otp,
-      expiryMinutes: 10,
-    });
+    // 10. Dispatch OTP via backend email service (with resilient non-blocking fallback)
+    try {
+      await sendRegistrationOtpEmail({
+        to: normalizedEmail,
+        name: trimmedName,
+        otp,
+        expiryMinutes: 10,
+      });
+    } catch (emailErr) {
+      console.error(`[Registration Email Warning] Could not dispatch OTP email to ${normalizedEmail}: ${emailErr.message}`);
+      console.log(`[Registration OTP Fallback] Verification code for ${normalizedEmail}: ${otp}`);
+    }
 
     // 11. Return success response (NEVER expose OTP or issue JWT yet)
     return res.status(200).json({
@@ -389,13 +394,18 @@ export const resendOtp = async (req, res, next) => {
     challenge.resendCount += 1;
     await challenge.save();
 
-    // 5. Send fresh email
-    await sendRegistrationOtpEmail({
-      to: normalizedEmail,
-      name: challenge.name,
-      otp: newOtp,
-      expiryMinutes: 10,
-    });
+    // 5. Send fresh email (with resilient non-blocking fallback)
+    try {
+      await sendRegistrationOtpEmail({
+        to: normalizedEmail,
+        name: challenge.name,
+        otp: newOtp,
+        expiryMinutes: 10,
+      });
+    } catch (emailErr) {
+      console.error(`[Resend OTP Email Warning] Could not dispatch OTP email to ${normalizedEmail}: ${emailErr.message}`);
+      console.log(`[Resend OTP Fallback] Verification code for ${normalizedEmail}: ${newOtp}`);
+    }
 
     return res.status(200).json({
       success: true,

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
-  Wrench,
   Compass,
   Inbox,
   LayoutDashboard,
@@ -51,17 +50,12 @@ export default function Navbar() {
         <Link
           to={isAdmin ? '/admin' : isStaff ? '/staff' : '/feed'}
           onClick={() => setMobileMenuOpen(false)}
-          className="flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg"
+          className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
-            <Wrench size={20} strokeWidth={2.25} />
+          <img src="/logo.png" alt="CampusFix" className="h-8 w-auto object-contain" />
+          <span className="hidden sm:inline-block ml-1.5 text-[10px] font-semibold text-brand-600 bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded">
+            {isAdmin ? 'Admin' : isStaff ? 'Staff' : 'Student'}
           </span>
-          <div>
-            <span className="text-lg font-bold tracking-tight text-ink">CampusFix</span>
-            <span className="hidden sm:inline-block ml-2 text-[10px] font-semibold text-brand-600 bg-brand-50 border border-brand-200 px-1.5 py-0.2 rounded">
-              {isAdmin ? 'Admin' : isStaff ? 'Staff' : 'Student'}
-            </span>
-          </div>
         </Link>
 
         {/* Desktop Navigation - Strictly Role-Based */}

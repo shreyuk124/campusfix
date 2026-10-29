@@ -3,7 +3,6 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Wrench,
   GraduationCap,
   AlertCircle,
   CheckCircle2,
@@ -202,9 +201,15 @@ export default function RegisterPage() {
         <Card className="shadow-modal">
           {/* Header */}
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
-              {step === 'otp' ? <Mail size={24} aria-hidden="true" /> : <Wrench size={24} aria-hidden="true" />}
-            </div>
+            {step === 'otp' ? (
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
+                <Mail size={24} aria-hidden="true" />
+              </div>
+            ) : (
+              <Link to="/" className="inline-block mb-3 focus:outline-none">
+                <img src="/logo.png" alt="CampusFix" className="h-10 mx-auto w-auto object-contain" />
+              </Link>
+            )}
             <h1 className="text-2xl font-bold tracking-tight text-ink">
               {step === 'otp' ? 'Verify Institutional Email' : 'Create Student Account'}
             </h1>

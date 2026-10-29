@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Wrench,
   GraduationCap,
   HardHat,
   Shield,
@@ -211,15 +210,10 @@ export default function LandingPage() {
       <header className="border-b border-line bg-surface/90 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
-              <Wrench size={22} strokeWidth={2.2} />
-            </span>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-ink">CampusFix</span>
-              <p className="text-[11px] text-muted hidden sm:block">
-                Campus Infrastructure &amp; Maintenance Resolution
-              </p>
-            </div>
+            <img src="/logo.png" alt="CampusFix" className="h-9 w-auto object-contain" />
+            <p className="text-[11px] text-muted hidden sm:block border-l border-line pl-3">
+              Campus Infrastructure &amp; Maintenance Resolution
+            </p>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-muted font-medium">

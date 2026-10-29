@@ -69,36 +69,14 @@ export function IssueCard({
     }
   };
 
-  const handleCheckboxClick = (e) => {
-    e.stopPropagation();
-    if (onSelect) {
-      onSelect(issue);
-    }
-  };
-
   return (
     <div
-      className={`group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-4 sm:p-5 shadow-card transition-all duration-150 hover:shadow-hover hover:border-brand-200 ${
-        isSelected ? 'ring-2 ring-brand-500 bg-brand-50/20' : ''
-      } ${className}`}
+      className={`group relative flex flex-col justify-between rounded-xl border border-line bg-surface p-4 sm:p-5 shadow-card transition-all duration-150 hover:shadow-hover hover:border-brand-200 ${className}`}
     >
-      {/* Top Row: Category Icon, Title, Reference ID & Optional Admin Checkbox */}
+      {/* Top Row: Category Icon, Title, Reference ID */}
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2.5 min-w-0 flex-1">
-            {/* Admin checkbox */}
-            {variant === 'admin' && (
-              <div className="pt-0.5 pr-1">
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={handleCheckboxClick}
-                  className="h-4 w-4 rounded border-line-strong text-brand-600 focus:ring-brand-500 cursor-pointer"
-                  aria-label={`Select issue ${referenceId}`}
-                />
-              </div>
-            )}
-
             {/* Category Icon Badge */}
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 border border-brand-100 transition-colors group-hover:bg-brand-100"
@@ -162,7 +140,7 @@ export function IssueCard({
             <span>{affectedCount} affected</span>
           </span>
 
-          {variant !== 'admin' && showJoinButton && !isReporter && status !== 'Resolved' && status !== 'Closed' && (
+          {variant !== 'admin' && showJoinButton && !isReporter && status !== 'Resolved' && (
             <button
               type="button"
               onClick={handleJoinClick}
@@ -214,7 +192,7 @@ export function IssueCard({
       {/* Admin Quick Actions Strip (when variant='admin') */}
       {variant === 'admin' && onQuickAction && (
         <div className="mt-3 pt-2.5 border-t border-line/60 flex items-center justify-between text-xs">
-          {status === 'Resolved' || status === 'Closed' ? (
+          {status === 'Resolved' ? (
             <span className="text-muted">
               Handled by: <strong className="text-ink">{assignedTeam !== 'Unassigned' ? assignedTeam : 'Campus Maintenance'}</strong>
             </span>
@@ -229,7 +207,7 @@ export function IssueCard({
             </span>
           )}
 
-          {status !== 'Resolved' && status !== 'Closed' && (
+          {status !== 'Resolved' && (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"

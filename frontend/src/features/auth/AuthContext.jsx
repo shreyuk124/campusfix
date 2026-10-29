@@ -44,6 +44,24 @@ export function AuthProvider({ children }) {
   const login = async ({ email, password, role = 'student' }) => {
     setIsLoading(true);
 
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanPassword = (password || '').trim();
+
+    // Strict Admin Access Control:
+    // Supports both admin@coeptech.ac.in and admin@coeptech.ac with password admin123
+    const isAdminEmail = cleanEmail === 'admin@coeptech.ac.in' || cleanEmail === 'admin@coeptech.ac';
+    if (role === 'admin' || isAdminEmail) {
+      if (!isAdminEmail || cleanPassword !== 'admin123') {
+        setIsLoading(false);
+        const error = new Error('Invalid email or password');
+        error.response = {
+          status: 401,
+          data: { message: 'Invalid email or password. Access to Admin requires valid administrator credentials.' },
+        };
+        throw error;
+      }
+    }
+
     if (simulateFailure) {
       setIsLoading(false);
       const error = new Error('Email or password is incorrect');
@@ -56,57 +74,59 @@ export function AuthProvider({ children }) {
 
     try {
       // 1. Attempt live backend login
-      const data = await authApi.login({ email: email.trim().toLowerCase(), password, role });
+      const data = await authApi.login({ email: cleanEmail, password: cleanPassword, role });
       setIsBackendConnected(true);
       const authenticatedUser = data.user || {
         id: data.id || 'usr-live-01',
-        email,
-        name: data.name || email.split('@')[0],
+        email: cleanEmail,
+        name: data.name || (role === 'admin' ? 'COEP Admin' : cleanEmail.split('@')[0]),
         role: data.role || role,
       };
       setUser(authenticatedUser);
-      localStorage.setItem(STORAGE_KEY_TOKEN, data.token || 'mock-jwt-token');
+      if (data.token) {
+        localStorage.setItem(STORAGE_KEY_TOKEN, data.token);
+      }
       localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(authenticatedUser));
       setIsLoading(false);
       return authenticatedUser;
     } catch (err) {
+      setIsLoading(false);
       if (err.response && (err.response.status === 401 || err.response.status === 400)) {
-        setIsLoading(false);
         throw err;
       }
 
-      // 2. Fallback to prototype mock mode if backend offline
       setIsBackendConnected(false);
 
-      if (password === 'wrongpassword' || password === 'invalid123') {
-        setIsLoading(false);
-        const error = new Error('Email or password is incorrect');
-        error.response = {
-          status: 401,
-          data: { message: 'Email or password is incorrect. Please verify your credentials and try again.' },
+      if (role === 'admin' || isAdminEmail) {
+        if (!isAdminEmail || cleanPassword !== 'admin123') {
+          const error = new Error('Invalid email or password');
+          error.response = {
+            status: 401,
+            data: { message: 'Invalid email or password. Access to Admin requires valid administrator credentials.' },
+          };
+          throw error;
+        }
+
+        const adminUser = {
+          id: 'usr-admin-coep',
+          name: 'COEP Admin',
+          email: cleanEmail,
+          role: 'admin',
         };
-        throw error;
+        setUser(adminUser);
+        localStorage.setItem(STORAGE_KEY_TOKEN, 'admin-live-auth-token');
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(adminUser));
+        return adminUser;
       }
 
-      const getRoleDisplayName = (r) => {
-        if (r === 'admin') return 'Campus Admin';
-        if (r === 'staff') return 'Maintenance Staff';
-        return email.split('@')[0].replace('.', ' ');
+      const netErr = new Error(
+        err.response?.data?.message || 'Unable to connect to live authentication service. Please check your network.'
+      );
+      netErr.response = err.response || {
+        status: 503,
+        data: { message: 'Unable to connect to live authentication service. Please try again.' },
       };
-
-      const mockUser = {
-        id: role === 'admin' ? 'usr-admin-882' : role === 'staff' ? 'usr-staff-305' : 'usr-student-419',
-        name: getRoleDisplayName(role),
-        email,
-        role,
-        isMock: true,
-      };
-
-      setUser(mockUser);
-      localStorage.setItem(STORAGE_KEY_TOKEN, 'mock-prototype-jwt-token');
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(mockUser));
-      setIsLoading(false);
-      return mockUser;
+      throw netErr;
     }
   };
 

@@ -20,7 +20,7 @@ import { registerSchema } from '../../lib/validation';
 import { useAuth } from './useAuth';
 import PasswordToggle from './PasswordToggle';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
-import AuthNotice from './AuthNotice';
+
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -96,16 +96,7 @@ export default function RegisterPage() {
     }
   }, [location.state]);
 
-  const handleQuickFill = () => {
-    setServerError('');
-    clearErrors();
-    setValue('fullName', 'Priya Sharma', { shouldValidate: true });
-    setValue('email', 'priya.sharma@coeptech.ac.in', { shouldValidate: true });
-    setValue('studentId', 'STU-2026-8819', { shouldValidate: true });
-    setValue('password', 'CampusPass2026!', { shouldValidate: true });
-    setValue('confirmPassword', 'CampusPass2026!', { shouldValidate: true });
-    setValue('acceptTerms', true, { shouldValidate: true });
-  };
+
 
   /**
    * Step 1: Submit initial registration form -> Triggers OTP dispatch
@@ -195,9 +186,6 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center py-6 sm:py-10">
       <div className="w-full max-w-[480px]">
-        {/* Prototype & Security Notice Banner */}
-        <AuthNotice onQuickFill={handleQuickFill} role="student" isRegister={true} />
-
         <Card className="shadow-modal">
           {/* Header */}
           <div className="mb-6 text-center">

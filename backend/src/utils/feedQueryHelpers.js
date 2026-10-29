@@ -18,8 +18,6 @@ export const ALLOWED_STATUSES = Object.freeze([
   'Assigned',
   'In Progress',
   'Resolved',
-  'Closed',
-  'Reopened',
 ]);
 
 export const ALLOWED_PRIORITY_BANDS = Object.freeze([

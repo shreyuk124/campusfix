@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Camera, Image as ImageIcon, Upload, X, AlertCircle } from 'lucide-react';
 
 /**
  * System Limits for Photo Evidence
@@ -13,8 +13,8 @@ export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
  * PhotoUploader Component
  * 
  * Clean, modular component providing:
- * 1. "Take Photo" button -> Opens phone camera directly using capture="environment"
- * 2. "Choose from Gallery" button -> Opens phone photo library
+ * 1. Mobile users -> "Take Photo" (opens live camera) & "Choose from Gallery"
+ * 2. Laptop/Desktop users -> "Upload Photos" file picker (no camera trigger)
  * 3. Instant thumbnail preview & removal
  * 
  * @param {Array} photos - Current array of photo objects: [{ id, file, previewUrl }]
@@ -30,6 +30,27 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
 
   // Local state for file validation errors
   const [localError, setLocalError] = useState('');
+
+  // Detect whether the user is on a mobile device or laptop/desktop
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const mobileUARegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i;
+    const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    return mobileUARegex.test(ua) || (hasTouch && window.innerWidth < 768);
+  });
+
+  useEffect(() => {
+    const handleCheckMobile = () => {
+      const ua = navigator.userAgent || '';
+      const mobileUARegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i;
+      const hasTouch = 'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      setIsMobile(mobileUARegex.test(ua) || (hasTouch && window.innerWidth < 768));
+    };
+
+    window.addEventListener('resize', handleCheckMobile);
+    return () => window.removeEventListener('resize', handleCheckMobile);
+  }, []);
 
   /**
    * Process selected files from camera or gallery
@@ -116,7 +137,10 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
             Photo Evidence <span className="text-muted font-normal">(Optional)</span>
           </label>
           <p className="text-xs text-muted">
-            Attach up to {MAX_PHOTOS} photos. Take a live picture or pick from gallery.
+            Attach up to {MAX_PHOTOS} photos.{' '}
+            {isMobile
+              ? 'Take a live picture or pick from gallery.'
+              : 'Select image files from your computer.'}
           </p>
         </div>
 
@@ -131,25 +155,27 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
         </span>
       </div>
 
-      {/* 1. Dedicated Camera Input (capture="environment" forces camera on mobile) */}
-      <input
-        id="camera-photo-input"
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onClick={(e) => {
-          e.target.value = '';
-        }}
-        onChange={(e) => {
-          if (e.target.files && e.target.files.length > 0) {
-            handleFilesAdded(e.target.files);
-          }
-        }}
-        className="sr-only"
-        aria-hidden="true"
-        tabIndex={-1}
-      />
+      {/* 1. Dedicated Camera Input (capture="environment" forces camera on mobile only) */}
+      {isMobile && (
+        <input
+          id="camera-photo-input"
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onClick={(e) => {
+            e.target.value = '';
+          }}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              handleFilesAdded(e.target.files);
+            }
+          }}
+          className="sr-only"
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+      )}
 
       {/* 2. Dedicated Gallery Input (standard file picker) */}
       <input
@@ -175,31 +201,45 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
       {photos.length < MAX_PHOTOS && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-line-strong bg-surface p-5 text-center transition-all duration-150 hover:border-brand-500 hover:bg-surface-muted">
           <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-            <Camera size={22} />
+            {isMobile ? <Camera size={22} /> : <Upload size={22} />}
           </div>
 
-          <p className="text-sm font-semibold text-ink">Add Photo Evidence</p>
+          <p className="text-sm font-semibold text-ink">
+            {isMobile ? 'Add Photo Evidence' : 'Upload Photo Evidence'}
+          </p>
           <p className="mt-0.5 text-xs text-muted">
             Up to {MAX_PHOTOS} photos • Max {MAX_FILE_SIZE_MB}MB each
           </p>
 
-          {/* Action Buttons: Take Photo (Camera) & Gallery */}
+          {/* Action Buttons: Take Photo (Mobile only) & Gallery / File Picker */}
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2.5">
-            <label
-              htmlFor="camera-photo-input"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 cursor-pointer"
-            >
-              <Camera size={15} />
-              <span>Take Photo</span>
-            </label>
+            {isMobile ? (
+              <>
+                <label
+                  htmlFor="camera-photo-input"
+                  className="inline-flex md:hidden items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 cursor-pointer"
+                >
+                  <Camera size={15} />
+                  <span>Take Photo</span>
+                </label>
 
-            <label
-              htmlFor="gallery-photo-input"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:bg-canvas hover:border-brand-400 active:scale-95 cursor-pointer"
-            >
-              <ImageIcon size={15} className="text-brand-600" />
-              <span>Choose from Gallery</span>
-            </label>
+                <label
+                  htmlFor="gallery-photo-input"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:bg-canvas hover:border-brand-400 active:scale-95 cursor-pointer"
+                >
+                  <ImageIcon size={15} className="text-brand-600" />
+                  <span>Choose from Gallery</span>
+                </label>
+              </>
+            ) : (
+              <label
+                htmlFor="gallery-photo-input"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 cursor-pointer"
+              >
+                <Upload size={15} />
+                <span>Upload Photos</span>
+              </label>
+            )}
           </div>
         </div>
       )}

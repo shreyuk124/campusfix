@@ -115,6 +115,21 @@ export function createFeedController(deps = {}) {
       const { sortObj } = parseSort(req.query.sort);
       const filter = buildFilter(req.query);
 
+      // Feed Retention Rule: Resolved issues only stay in public feed for 5 days after resolution
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+      if (filter.status === 'Resolved') {
+        filter.$or = [
+          { resolvedAt: { $gte: fiveDaysAgo } },
+          { resolvedAt: null, updatedAt: { $gte: fiveDaysAgo } },
+        ];
+      } else if (!filter.status && !filter.$or) {
+        filter.$or = [
+          { status: { $ne: 'Resolved' } },
+          { resolvedAt: { $gte: fiveDaysAgo } },
+          { resolvedAt: null, updatedAt: { $gte: fiveDaysAgo } },
+        ];
+      }
+
       // Execute query with standard Mongoose populate paths
       let query = Model.find(filter)
         .sort(sortObj)
@@ -266,13 +281,12 @@ export function createFeedController(deps = {}) {
       }
 
       if (req.query.tab === 'my-active' || req.query.tab === 'active') {
-        filter.status = { $in: ['Reported', 'Assigned', 'In Progress', 'Reopened'] };
+        filter.status = { $in: ['Reported', 'Assigned', 'In Progress'] };
       } else if (
         req.query.tab === 'my-resolved' ||
-        req.query.tab === 'resolved' ||
-        req.query.tab === 'closed'
+        req.query.tab === 'resolved'
       ) {
-        filter.status = { $in: ['Resolved', 'Closed', 'Rejected', 'Merged'] };
+        filter.status = 'Resolved';
       }
 
       let query = Model.find(filter)

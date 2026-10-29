@@ -53,6 +53,7 @@ export default function FeedPage() {
       const result = await issuesService.getIssues({
         page,
         limit,
+        isFeed: true,
         ...filters,
         simulateDelay: 300,
       });

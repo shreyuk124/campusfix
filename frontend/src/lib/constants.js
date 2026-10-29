@@ -5,10 +5,6 @@ export const STATUSES = [
   'Assigned',
   'In Progress',
   'Resolved',
-  'Closed',
-  'Reopened',
-  'Rejected',
-  'Merged',
 ];
 
 export const STATUS_CONFIG = {
@@ -43,38 +39,6 @@ export const STATUS_CONFIG = {
     border: '#A7E3DC',
     icon: 'CheckCircle2',
     description: 'Work completed. Awaiting confirmation from reporter.',
-  },
-  Closed: {
-    label: 'Closed',
-    text: '#334155',
-    bg: '#E2E8F0',
-    border: '#CBD5E1',
-    icon: 'Archive',
-    description: 'Issue verified and closed.',
-  },
-  Reopened: {
-    label: 'Reopened',
-    text: '#B42318',
-    bg: '#FDECEA',
-    border: '#F7C1BB',
-    icon: 'RotateCcw',
-    description: 'Issue was reopened because problem persists.',
-  },
-  Rejected: {
-    label: 'Rejected',
-    text: '#6B7280',
-    bg: '#F1F2F4',
-    border: '#E5E7EB',
-    icon: 'XCircle',
-    description: 'Issue declined with explanation.',
-  },
-  Merged: {
-    label: 'Merged',
-    text: '#7C3AED',
-    bg: '#F1EBFD',
-    border: '#DDD6FE',
-    icon: 'GitMerge',
-    description: 'Duplicate merged into another primary report.',
   },
 };
 

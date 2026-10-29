@@ -2,7 +2,7 @@
 import { INITIAL_ISSUES } from './mockIssuesData';
 import { issuesApi } from '../../api/issues';
 
-const STORAGE_KEY = 'campusfix_coep_issues_v2';
+const STORAGE_KEY = 'campusfix_coep_issues_live';
 
 /**
  * Extracts current authenticated user from local storage
@@ -116,9 +116,17 @@ class IssuesService {
 
   init() {
     try {
+      // Clean legacy mock demo cache if present
+      localStorage.removeItem('campusfix_coep_issues_v2');
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ISSUES));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const clean = Array.isArray(parsed)
+          ? parsed.filter((item) => item.id && !String(item.id).startsWith('cf-00'))
+          : [];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       }
     } catch {
       // Ignore if localStorage unavailable
@@ -129,12 +137,15 @@ class IssuesService {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed)
+          ? parsed.filter((item) => item.id && !String(item.id).startsWith('cf-00'))
+          : [];
       }
     } catch (e) {
       console.error('Error reading localStorage issues:', e);
     }
-    return [...INITIAL_ISSUES];
+    return [];
   }
 
   saveIssues(issues) {
@@ -208,6 +219,7 @@ class IssuesService {
     status = 'all',
     sort = 'newest',
     tab = 'all', // 'all', 'my-active', 'my-resolved', 'my-closed'
+    isFeed = false,
     simulateDelay = 100,
     forceError = false,
   } = {}) {
@@ -222,25 +234,29 @@ class IssuesService {
     // Sync from live MongoDB Atlas backend
     let items = await this.syncWithBackend();
 
+    // Feed Retention Rule: If an issue is resolved, it only stays in feed for 5 days after resolution
+    if (isFeed) {
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      items = items.filter((item) => {
+        const isResolved = item.status === 'Resolved';
+        if (!isResolved) return true;
+        const resolvedTime = new Date(item.resolvedAt || item.updatedAt || item.createdAt).getTime();
+        return (now - resolvedTime) <= FIVE_DAYS_MS;
+      });
+    }
+
     // Tab filter for My Issues (strictly isolated to currently authenticated user)
     const currentUserId = this.getCurrentUserId();
     if (tab === 'my-active') {
       items = items.filter(
         (item) =>
           item.isReporter &&
-          ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(
-            item.status
-          )
+          ['Reported', 'Assigned', 'In Progress'].includes(item.status)
       );
-    } else if (
-      tab === 'my-resolved' ||
-      tab === 'my-closed' ||
-      tab === 'my-awaiting'
-    ) {
+    } else if (tab === 'my-resolved') {
       items = items.filter(
-        (item) =>
-          item.isReporter &&
-          ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
+        (item) => item.isReporter && item.status === 'Resolved'
       );
     }
 
@@ -674,11 +690,11 @@ class IssuesService {
   }
 
   /**
-   * Reset data to initial seed
+   * Reset data to clean state
    */
   resetData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ISSUES));
-    return [...INITIAL_ISSUES];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    return [];
   }
 }
 

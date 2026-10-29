@@ -30,14 +30,7 @@ export function StatusBadge({ status, className = '' }) {
       case 'In Progress':
         return <RefreshCw {...iconProps} className="shrink-0 animate-spin" />;
       case 'Resolved':
-      case 'Closed':
         return <CheckCircle2 {...iconProps} />;
-      case 'Reopened':
-        return <AlertCircle {...iconProps} />;
-      case 'Rejected':
-        return <XCircle {...iconProps} />;
-      case 'Merged':
-        return <CircleDot {...iconProps} />;
       default:
         return <CircleDot {...iconProps} />;
     }

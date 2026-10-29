@@ -8,8 +8,6 @@ import {
   Clock,
   CheckCircle2,
   Filter,
-  CheckSquare,
-  Square,
   UserCheck,
   RotateCcw,
   Wrench,
@@ -27,7 +25,6 @@ export default function AdminPage() {
   const [issues, setIssues] = useState([]);
   const [allLocalIssues, setAllLocalIssues] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedIssueIds, setSelectedIssueIds] = useState([]);
   const [activeTab, setActiveTab] = useState('triage'); // 'triage' | 'all'
   const [filters, setFilters] = useState({
     search: '',
@@ -57,6 +54,8 @@ export default function AdminPage() {
         simulateDelay: 200,
       });
       setIssues(res.issues);
+      // Ensure local issues are refreshed in case syncWithBackend updated them
+      setAllLocalIssues(issuesService.getAllLocalIssues());
     } catch (err) {
       console.error(err);
     } finally {
@@ -72,24 +71,10 @@ export default function AdminPage() {
   const stats = useMemo(() => {
     const triage = allLocalIssues.filter((i) => i.status === 'Reported').length;
     const inProgress = allLocalIssues.filter((i) => i.status === 'In Progress' || i.status === 'Assigned').length;
-    const resolved = allLocalIssues.filter((i) => i.status === 'Resolved' || i.status === 'Closed').length;
-    const totalActive = allLocalIssues.filter((i) => !['Resolved', 'Closed', 'Rejected'].includes(i.status)).length;
+    const resolved = allLocalIssues.filter((i) => i.status === 'Resolved').length;
+    const totalActive = allLocalIssues.filter((i) => i.status !== 'Resolved').length;
     return { triage, inProgress, resolved, totalActive };
   }, [allLocalIssues]);
-
-  const handleSelectCard = (issue) => {
-    setSelectedIssueIds((prev) =>
-      prev.includes(issue.id) ? prev.filter((id) => id !== issue.id) : [...prev, issue.id]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedIssueIds.length === issues.length) {
-      setSelectedIssueIds([]);
-    } else {
-      setSelectedIssueIds(issues.map((i) => i.id));
-    }
-  };
 
   const handleQuickAction = (action, issue) => {
     if (action === 'assign') {
@@ -122,17 +107,6 @@ export default function AdminPage() {
     }
   };
 
-  const handleResetData = () => {
-    issuesService.resetData();
-    setSelectedIssueIds([]);
-    fetchAdminIssues();
-    addToast({
-      type: 'info',
-      title: 'Demo Data Reset',
-      message: 'All campus issues restored to original seed state.',
-    });
-  };
-
   const displayName = user?.name ? `${user.name}'s Management Dashboard` : 'Authority Management Dashboard';
 
   return (
@@ -155,11 +129,12 @@ export default function AdminPage() {
         <Button
           variant="secondary"
           size="sm"
-          onClick={handleResetData}
+          onClick={fetchAdminIssues}
+          disabled={isLoading}
           className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs"
         >
-          <RotateCcw size={13} />
-          <span>Reset Demo Data</span>
+          <RotateCcw size={13} className={isLoading ? 'animate-spin' : ''} />
+          <span>Refresh Queue</span>
         </Button>
       </div>
 
@@ -190,7 +165,7 @@ export default function AdminPage() {
         <div
           onClick={() => {
             setActiveTab('all');
-            setFilters((f) => ({ ...f, status: 'In Progress' }));
+            setFilters((f) => ({ ...f, status: 'in-progress-group' }));
           }}
           className="rounded-xl border border-line bg-surface p-4 shadow-card cursor-pointer hover:border-indigo-300 transition-all"
           role="button"
@@ -259,7 +234,7 @@ export default function AdminPage() {
                 : 'border-transparent text-muted hover:text-ink'
             }`}
           >
-            Triage Queue (Reported)
+            Triage Queue ({stats.triage})
           </button>
           <button
             type="button"
@@ -270,23 +245,9 @@ export default function AdminPage() {
                 : 'border-transparent text-muted hover:text-ink'
             }`}
           >
-            All Campus Issues
+            All Campus Issues ({allLocalIssues.length})
           </button>
         </div>
-
-        {/* Bulk select summary if cards selected */}
-        {selectedIssueIds.length > 0 && (
-          <div className="flex items-center gap-2 text-xs font-medium bg-brand-50 text-brand-700 px-3 py-1 rounded-lg border border-brand-200">
-            <span>{selectedIssueIds.length} issues selected</span>
-            <button
-              type="button"
-              onClick={() => setSelectedIssueIds([])}
-              className="text-brand-900 font-bold hover:underline ml-1"
-            >
-              Clear
-            </button>
-          </div>
-        )}
       </div>
 
       {/* FilterBar */}
@@ -296,22 +257,9 @@ export default function AdminPage() {
         showStatusFilter={activeTab === 'all'}
       />
 
-      {/* Bulk Select Control Bar */}
+      {/* Issues Count Bar */}
       {issues.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-muted px-1">
-          <button
-            type="button"
-            onClick={handleSelectAll}
-            className="flex items-center gap-1.5 font-medium hover:text-ink"
-          >
-            {selectedIssueIds.length === issues.length ? (
-              <CheckSquare size={16} className="text-brand-600" />
-            ) : (
-              <Square size={16} />
-            )}
-            <span>Select all {issues.length} displayed issues</span>
-          </button>
-
+        <div className="flex items-center justify-end text-xs text-muted px-1">
           <span>
             Showing <strong className="text-ink">{issues.length}</strong> issues
           </span>
@@ -336,8 +284,6 @@ export default function AdminPage() {
               key={issue.id}
               issue={issue}
               variant="admin"
-              isSelected={selectedIssueIds.includes(issue.id)}
-              onSelect={handleSelectCard}
               onQuickAction={handleQuickAction}
               showJoinButton={false}
             />

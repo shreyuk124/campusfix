@@ -9,9 +9,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  FileText,
-  Check,
-  Settings,
 } from 'lucide-react';
 import { IssueCard, FilterBar } from '../issues/components';
 import { IssueCardSkeleton, EmptyState, ErrorState, useToast } from '../../components/ui';
@@ -120,71 +117,54 @@ export default function FeedPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Top Hero Banner matching campus_feed_redesign.jpg */}
-      <div className="rounded-2xl border border-line bg-surface p-6 sm:p-7 shadow-xs">
+      {/* Top Hero Banner */}
+      <div className="rounded-2xl border border-line bg-surface p-5 sm:p-7 shadow-card">
         <div>
-          {/* Blue Pill with Orange Checkmark Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand-500 px-3 py-1 text-xs font-semibold text-white mb-2 shadow-xs">
-            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-action-orange text-white">
-              <Check size={9} strokeWidth={3.5} />
-            </span>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700 mb-2">
+            <Sparkles size={13} className="text-brand-500" />
             <span>Campus Issue Transparency</span>
           </div>
-
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-display">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">
             Campus Issue Feed
           </h1>
+          <p className="mt-1 text-sm sm:text-base text-muted max-w-2xl">
+            Browse campus maintenance reports, view live progress, and flag issues that affect your daily classes or campus facilities.
+          </p>
         </div>
 
-        {/* 4 Solid Vibrant KPI Cards matching campus_feed_redesign.jpg with shimmer sheen on hover */}
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* 1. Total Tracked (Sky Blue) */}
-          <div className="group/kpi relative overflow-hidden p-4 rounded-xl bg-[#0284C7] text-white flex items-center gap-3.5 shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-200 cursor-default">
-            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/kpi:animate-shimmer" />
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white transition-transform duration-200 group-hover/kpi:scale-110">
-              <FileText size={22} />
-            </div>
-            <div>
-              <span className="text-xs text-white/90 font-medium block">Total Tracked</span>
-              <span className="text-xl sm:text-2xl font-bold block leading-tight">
-                {data.total || 39} reports
+        {/* Quick Stats Strip */}
+        <div className="mt-6 pt-5 border-t border-line grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-3 rounded-xl bg-surface-muted border border-line/60">
+            <span className="text-xs text-muted font-medium">Total Tracked</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-ink">
+                {data.total || 24}
               </span>
+              <span className="text-xs text-muted font-medium">reports</span>
             </div>
           </div>
 
-          {/* 2. Resolved This Week (Emerald Green) */}
-          <div className="group/kpi relative overflow-hidden p-4 rounded-xl bg-[#10B981] text-white flex items-center gap-3.5 shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-200 cursor-default">
-            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/kpi:animate-shimmer" />
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white transition-transform duration-200 group-hover/kpi:scale-110">
-              <CheckCircle2 size={22} />
-            </div>
-            <div>
-              <span className="text-xs text-white/90 font-medium block">Resolved This Week</span>
-              <span className="text-xl sm:text-2xl font-bold block leading-tight">18</span>
+          <div className="p-3 rounded-xl bg-teal-50/60 border border-teal-200/60">
+            <span className="text-xs text-teal-800 font-medium">Resolved This Week</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-teal-900">18</span>
+              <CheckCircle2 size={16} className="text-teal-600" />
             </div>
           </div>
 
-          {/* 3. In Active Progress (Royal Blue) */}
-          <div className="group/kpi relative overflow-hidden p-4 rounded-xl bg-[#2563EB] text-white flex items-center gap-3.5 shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-200 cursor-default">
-            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/kpi:animate-shimmer" />
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white transition-transform duration-200 group-hover/kpi:scale-110">
-              <Settings size={22} />
-            </div>
-            <div>
-              <span className="text-xs text-white/90 font-medium block">In Active Progress</span>
-              <span className="text-xl sm:text-2xl font-bold block leading-tight">4</span>
+          <div className="p-3 rounded-xl bg-surface-muted border border-line/60">
+            <span className="text-xs text-muted font-medium">In Active Progress</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-indigo-700">4</span>
+              <Clock size={16} className="text-indigo-500" />
             </div>
           </div>
 
-          {/* 4. Students Affected (Action Orange) */}
-          <div className="group/kpi relative overflow-hidden p-4 rounded-xl bg-[#EA580C] text-white flex items-center gap-3.5 shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-200 cursor-default">
-            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover/kpi:animate-shimmer" />
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/20 text-white transition-transform duration-200 group-hover/kpi:scale-110">
-              <Users size={22} />
-            </div>
-            <div>
-              <span className="text-xs text-white/90 font-medium block">Students Affected</span>
-              <span className="text-xl sm:text-2xl font-bold block leading-tight">42</span>
+          <div className="p-3 rounded-xl bg-brand-50/60 border border-brand-200/60">
+            <span className="text-xs text-brand-800 font-medium">Students Affected</span>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-brand-600">42</span>
+              <Users size={16} className="text-brand-600" />
             </div>
           </div>
         </div>
@@ -199,7 +179,8 @@ export default function FeedPage() {
 
       {/* Feed Content */}
       {isLoading ? (
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <IssueCardSkeleton />
           <IssueCardSkeleton />
           <IssueCardSkeleton />
           <IssueCardSkeleton />
@@ -219,7 +200,7 @@ export default function FeedPage() {
           onAction={() => (window.location.href = '/report')}
         />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Results Summary Count */}
           <div className="flex items-center justify-between text-xs text-muted px-1">
             <span>
@@ -231,17 +212,15 @@ export default function FeedPage() {
             </span>
           </div>
 
-          {/* Cards Stream with Staggered Cascading Entrance */}
-          <div className="flex flex-col gap-4">
-            {data.issues.map((issue, index) => (
+          {/* Cards Grid: 1 col on mobile, 2 cols on tablet/desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {data.issues.map((issue) => (
               <IssueCard
                 key={issue.id}
                 issue={issue}
                 variant="default"
                 onToggleJoin={handleToggleJoin}
                 showJoinButton={true}
-                className="animate-feed-card"
-                style={{ animationDelay: `${index * 55}ms` }}
               />
             ))}
           </div>

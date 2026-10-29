@@ -211,40 +211,12 @@ export default function LandingPage() {
       <header className="border-b border-line bg-surface/90 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
-              {/* Collegiate Classical Pediment Building */}
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="translate-y-[-0.5px]"
-              >
-                <path d="M4 10h16M4 14h16M4 18h16" />
-                <path d="M6 10v8M10 10v8M14 10v8M18 10v8" />
-                <path d="M3 10l9-7 9 7v1H3v-1z" />
-                <path d="M2 21h20v-2H2v2z" />
-              </svg>
-              {/* Mini Orange Checkmark Badge */}
-              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-action text-white ring-2 ring-surface">
-                <Check size={10} strokeWidth={3.5} />
-              </span>
-            </div>
-
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
+              <Wrench size={22} strokeWidth={2.2} />
+            </span>
             <div>
-              <div className="flex items-baseline font-display">
-                <span className="text-xl sm:text-2xl font-bold tracking-tight text-brand-500">
-                  Campus
-                </span>
-                <span className="text-xl sm:text-2xl font-bold tracking-tight text-action">
-                  Fix
-                </span>
-              </div>
-              <p className="text-[11px] text-muted hidden sm:block -mt-0.5">
+              <span className="text-xl font-bold tracking-tight text-ink">CampusFix</span>
+              <p className="text-[11px] text-muted hidden sm:block">
                 Campus Infrastructure &amp; Maintenance Resolution
               </p>
             </div>

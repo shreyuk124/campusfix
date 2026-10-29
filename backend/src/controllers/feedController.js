@@ -65,11 +65,17 @@ function isModelReady(model) {
  * @param {Object} doc - Raw issue object or Mongoose document
  * @returns {Object} Public-safe issue object
  */
-export function sanitizePublicIssue(doc) {
+export function sanitizePublicIssue(doc, requestingUserId = null) {
   if (!doc) return null;
   const issue = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
 
-  // Never leak sensitive user fields from populated createdBy
+  // If caller is the reporter, flag isReporter: true for their frontend view
+  const rawCreatorId = issue.createdBy?._id || issue.createdBy;
+  if (requestingUserId && rawCreatorId && String(rawCreatorId) === String(requestingUserId)) {
+    issue.isReporter = true;
+  }
+
+  // Never leak sensitive user fields from populated createdBy to public callers
   if (issue.createdBy && typeof issue.createdBy === 'object') {
     issue.createdBy = {
       role: issue.createdBy.role || 'student',
@@ -148,8 +154,9 @@ export function createFeedController(deps = {}) {
         Model.countDocuments ? Model.countDocuments(filter) : Promise.resolve(0),
       ]);
 
+      const requestingUserId = req.user?._id || req.user?.id || null;
       const sanitizedData = Array.isArray(rawIssues)
-        ? rawIssues.map(sanitizePublicIssue)
+        ? rawIssues.map((doc) => sanitizePublicIssue(doc, requestingUserId))
         : [];
 
       return res.status(200).json({
@@ -214,9 +221,10 @@ export function createFeedController(deps = {}) {
         });
       }
 
+      const requestingUserId = req.user?._id || req.user?.id || null;
       return res.status(200).json({
         success: true,
-        data: sanitizePublicIssue(rawIssue),
+        data: sanitizePublicIssue(rawIssue, requestingUserId),
       });
     } catch (err) {
       if (err instanceof QueryValidationError) {

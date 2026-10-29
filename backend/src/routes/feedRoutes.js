@@ -20,6 +20,7 @@ import {
   getIssueById,
   getMyIssues,
 } from '../controllers/feedController.js';
+import { protect, optionalAuth } from '../middlewares/authMiddleware.js';
 
 /**
  * Factory to configure the feed router with optional dependencies (e.g. authMiddleware)
@@ -47,15 +48,13 @@ export function createFeedRouter({ authMiddleware = null, controller = null } = 
   }
 
   // 2. COLLECTION ROUTE: Public feed with filtering, sorting and pagination
-  router.get('/', ctrl.getFeed);
+  router.get('/', optionalAuth, ctrl.getFeed);
 
   // 3. DYNAMIC ROUTE: Issue details by ObjectId or refId
-  router.get('/:id', ctrl.getIssueById);
+  router.get('/:id', optionalAuth, ctrl.getIssueById);
 
   return router;
 }
-
-import { protect } from '../middlewares/authMiddleware.js';
 
 // Default router instance connected with live auth protect middleware
 export const feedRouter = createFeedRouter({ authMiddleware: protect });

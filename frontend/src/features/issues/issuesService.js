@@ -3,6 +3,31 @@ import { INITIAL_ISSUES } from './mockIssuesData';
 import { issuesApi } from '../../api/issues';
 
 const STORAGE_KEY = 'campusfix_coep_issues_live';
+const MY_REPORTS_KEY = 'campusfix_my_reported_ids';
+
+/**
+ * Returns set of issue IDs and refIds reported by the active student on this device
+ */
+function getMyReportedIds() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MY_REPORTS_KEY) : null;
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Registers an issue ID or reference ID as reported by the current student
+ */
+export function addMyReportedId(idOrRef) {
+  if (!idOrRef || typeof localStorage === 'undefined') return;
+  try {
+    const set = getMyReportedIds();
+    set.add(String(idOrRef).toLowerCase().trim());
+    localStorage.setItem(MY_REPORTS_KEY, JSON.stringify([...set]));
+  } catch {}
+}
 
 /**
  * Extracts current authenticated user from local storage
@@ -18,7 +43,7 @@ function getCurrentAuthUser() {
 
 /**
  * Normalizes an API issue document into a consistent frontend issue shape.
- * Dynamically resolves isReporter based on the authenticated user's ID.
+ * Dynamically resolves isReporter based on the authenticated user's ID or reported registry.
  */
 function normalizeIssue(doc) {
   if (!doc) return null;
@@ -31,9 +56,16 @@ function normalizeIssue(doc) {
     ? doc.createdBy?._id || doc.createdBy?.id
     : doc.createdBy;
 
+  const myReported = getMyReportedIds();
+  const matchesReportedRegistry =
+    myReported.has(id.toLowerCase()) ||
+    myReported.has(refId.toLowerCase()) ||
+    (doc.title && myReported.has(String(doc.title).toLowerCase().trim()));
+
   const isReporter = Boolean(
-    (currentUserId && createdById && String(createdById) === String(currentUserId)) ||
-    (doc.isReporter && (!createdById || String(createdById) === String(currentUserId)))
+    doc.isReporter ||
+    matchesReportedRegistry ||
+    (currentUserId && createdById && String(createdById) === String(currentUserId))
   );
 
   return {
@@ -138,9 +170,17 @@ class IssuesService {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return Array.isArray(parsed)
+        const list = Array.isArray(parsed)
           ? parsed.filter((item) => item.id && !String(item.id).startsWith('cf-00'))
           : [];
+        list.forEach((item) => {
+          if (item.isReporter) {
+            addMyReportedId(item.id);
+            addMyReportedId(item.referenceId);
+            if (item.title) addMyReportedId(item.title);
+          }
+        });
+        return list;
       }
     } catch (e) {
       console.error('Error reading localStorage issues:', e);
@@ -188,11 +228,17 @@ class IssuesService {
             localMap.get(norm.title.toLowerCase().trim());
           if (existing) {
             norm.hasJoined = existing.hasJoined || false;
+            norm.isReporter = existing.isReporter || norm.isReporter;
             if (existing.assignedStaff)
               norm.assignedStaff = existing.assignedStaff;
             if (existing.timeline && existing.timeline.length > 1) {
               norm.timeline = existing.timeline;
             }
+          }
+          if (norm.isReporter) {
+            addMyReportedId(norm.id);
+            addMyReportedId(norm.referenceId);
+            if (norm.title) addMyReportedId(norm.title);
           }
           return norm;
         });
@@ -375,6 +421,11 @@ class IssuesService {
         item.referenceId?.toLowerCase() === cleanId
     );
 
+    // The person who reported the issue cannot upvote it
+    if (target?.isReporter) {
+      throw new Error('You cannot upvote an issue you reported.');
+    }
+
     const apiTargetId = target?._id || target?.id || target?.referenceId || id;
 
     // 1. Call real backend API to increment report count in MongoDB Atlas
@@ -425,6 +476,11 @@ class IssuesService {
     const count = issues.length + 1;
     const realId = String(_id || id || `cf-${Date.now()}`);
     const realRefId = referenceId || `CF-${realId.slice(-5)}`;
+
+    // Track reported IDs so reporter can never upvote it across reloads
+    addMyReportedId(realId);
+    addMyReportedId(realRefId);
+    if (title || description) addMyReportedId(title || description.slice(0, 60).trim());
 
     // Extract photo URLs
     const photoUrls = (photos || [])

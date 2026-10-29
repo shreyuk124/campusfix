@@ -84,6 +84,15 @@ export default function FeedPage() {
 
   // Toggle Join "+1 I am affected too"
   const handleToggleJoin = async (issue) => {
+    if (issue.isReporter) {
+      addToast({
+        type: 'info',
+        title: 'Your Report',
+        message: 'The person who reported an issue cannot upvote it.',
+      });
+      return;
+    }
+
     try {
       const updated = await issuesService.toggleJoinIssue(issue.id);
       setData((prev) => ({

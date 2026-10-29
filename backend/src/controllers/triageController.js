@@ -9,14 +9,12 @@ import { StatusHistory } from '../models/StatusHistory.js';
 // Reported -> Assigned (strictly via POST /assign)
 // Assigned -> In Progress
 // In Progress -> Resolved (requires resolutionNote)
-// Resolved -> Closed
-// Closed is terminal (no transitions allowed)
+// Resolved is terminal (no transitions allowed)
 const ALLOWED_STATUS_TRANSITIONS = {
   Reported: [], // Cannot transition directly via PATCH /status; must use POST /assign
   Assigned: ['In Progress'],
   'In Progress': ['Resolved'],
-  Resolved: ['Closed'],
-  Closed: [],
+  Resolved: [],
 };
 
 /**
@@ -133,8 +131,8 @@ export const assignIssue = async (req, res, next) => {
       });
     }
 
-    // 3. Reject assignment when issue is already Resolved or Closed
-    if (['Resolved', 'Closed'].includes(issue.status)) {
+    // 3. Reject assignment when issue is already Resolved
+    if (issue.status === 'Resolved') {
       return res.status(422).json({
         success: false,
         error: {
@@ -298,10 +296,6 @@ export const updateIssueStatus = async (req, res, next) => {
     if (targetStatus === 'Resolved') {
       updateDoc.resolvedAt = new Date();
       updateDoc.resolutionNote = resolutionNote.trim();
-    }
-
-    if (targetStatus === 'Closed') {
-      updateDoc.closedAt = new Date();
     }
 
     // 7. Atomic optimistic lock: update conditioned on current status to prevent race conditions

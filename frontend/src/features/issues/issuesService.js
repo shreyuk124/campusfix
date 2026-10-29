@@ -2,7 +2,32 @@
 import { INITIAL_ISSUES } from './mockIssuesData';
 import { issuesApi } from '../../api/issues';
 
-const STORAGE_KEY = 'campusfix_coep_issues_v2';
+const STORAGE_KEY = 'campusfix_coep_issues_live';
+const MY_REPORTS_KEY = 'campusfix_my_reported_ids';
+
+/**
+ * Returns set of issue IDs and refIds reported by the active student on this device
+ */
+function getMyReportedIds() {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(MY_REPORTS_KEY) : null;
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Registers an issue ID or reference ID as reported by the current student
+ */
+export function addMyReportedId(idOrRef) {
+  if (!idOrRef || typeof localStorage === 'undefined') return;
+  try {
+    const set = getMyReportedIds();
+    set.add(String(idOrRef).toLowerCase().trim());
+    localStorage.setItem(MY_REPORTS_KEY, JSON.stringify([...set]));
+  } catch {}
+}
 
 /**
  * Extracts current authenticated user from local storage
@@ -18,7 +43,7 @@ function getCurrentAuthUser() {
 
 /**
  * Normalizes an API issue document into a consistent frontend issue shape.
- * Dynamically resolves isReporter based on the authenticated user's ID.
+ * Dynamically resolves isReporter based on the authenticated user's ID or reported registry.
  */
 function normalizeIssue(doc) {
   if (!doc) return null;
@@ -31,9 +56,16 @@ function normalizeIssue(doc) {
     ? doc.createdBy?._id || doc.createdBy?.id
     : doc.createdBy;
 
+  const myReported = getMyReportedIds();
+  const matchesReportedRegistry =
+    myReported.has(id.toLowerCase()) ||
+    myReported.has(refId.toLowerCase()) ||
+    (doc.title && myReported.has(String(doc.title).toLowerCase().trim()));
+
   const isReporter = Boolean(
-    (currentUserId && createdById && String(createdById) === String(currentUserId)) ||
-    (doc.isReporter && (!createdById || String(createdById) === String(currentUserId)))
+    doc.isReporter ||
+    matchesReportedRegistry ||
+    (currentUserId && createdById && String(createdById) === String(currentUserId))
   );
 
   return {
@@ -116,9 +148,17 @@ class IssuesService {
 
   init() {
     try {
+      // Clean legacy mock demo cache if present
+      localStorage.removeItem('campusfix_coep_issues_v2');
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ISSUES));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const clean = Array.isArray(parsed)
+          ? parsed.filter((item) => item.id && !String(item.id).startsWith('cf-00'))
+          : [];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
       }
     } catch {
       // Ignore if localStorage unavailable
@@ -129,12 +169,23 @@ class IssuesService {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        const list = Array.isArray(parsed)
+          ? parsed.filter((item) => item.id && !String(item.id).startsWith('cf-00'))
+          : [];
+        list.forEach((item) => {
+          if (item.isReporter) {
+            addMyReportedId(item.id);
+            addMyReportedId(item.referenceId);
+            if (item.title) addMyReportedId(item.title);
+          }
+        });
+        return list;
       }
     } catch (e) {
       console.error('Error reading localStorage issues:', e);
     }
-    return [...INITIAL_ISSUES];
+    return [];
   }
 
   saveIssues(issues) {
@@ -177,11 +228,17 @@ class IssuesService {
             localMap.get(norm.title.toLowerCase().trim());
           if (existing) {
             norm.hasJoined = existing.hasJoined || false;
+            norm.isReporter = existing.isReporter || norm.isReporter;
             if (existing.assignedStaff)
               norm.assignedStaff = existing.assignedStaff;
             if (existing.timeline && existing.timeline.length > 1) {
               norm.timeline = existing.timeline;
             }
+          }
+          if (norm.isReporter) {
+            addMyReportedId(norm.id);
+            addMyReportedId(norm.referenceId);
+            if (norm.title) addMyReportedId(norm.title);
           }
           return norm;
         });
@@ -208,6 +265,7 @@ class IssuesService {
     status = 'all',
     sort = 'newest',
     tab = 'all', // 'all', 'my-active', 'my-resolved', 'my-closed'
+    isFeed = false,
     simulateDelay = 100,
     forceError = false,
   } = {}) {
@@ -222,25 +280,29 @@ class IssuesService {
     // Sync from live MongoDB Atlas backend
     let items = await this.syncWithBackend();
 
+    // Feed Retention Rule: If an issue is resolved, it only stays in feed for 5 days after resolution
+    if (isFeed) {
+      const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      items = items.filter((item) => {
+        const isResolved = item.status === 'Resolved';
+        if (!isResolved) return true;
+        const resolvedTime = new Date(item.resolvedAt || item.updatedAt || item.createdAt).getTime();
+        return (now - resolvedTime) <= FIVE_DAYS_MS;
+      });
+    }
+
     // Tab filter for My Issues (strictly isolated to currently authenticated user)
     const currentUserId = this.getCurrentUserId();
     if (tab === 'my-active') {
       items = items.filter(
         (item) =>
           item.isReporter &&
-          ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(
-            item.status
-          )
+          ['Reported', 'Assigned', 'In Progress'].includes(item.status)
       );
-    } else if (
-      tab === 'my-resolved' ||
-      tab === 'my-closed' ||
-      tab === 'my-awaiting'
-    ) {
+    } else if (tab === 'my-resolved') {
       items = items.filter(
-        (item) =>
-          item.isReporter &&
-          ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(item.status)
+        (item) => item.isReporter && item.status === 'Resolved'
       );
     }
 
@@ -359,6 +421,11 @@ class IssuesService {
         item.referenceId?.toLowerCase() === cleanId
     );
 
+    // The person who reported the issue cannot upvote it
+    if (target?.isReporter) {
+      throw new Error('You cannot upvote an issue you reported.');
+    }
+
     const apiTargetId = target?._id || target?.id || target?.referenceId || id;
 
     // 1. Call real backend API to increment report count in MongoDB Atlas
@@ -409,6 +476,11 @@ class IssuesService {
     const count = issues.length + 1;
     const realId = String(_id || id || `cf-${Date.now()}`);
     const realRefId = referenceId || `CF-${realId.slice(-5)}`;
+
+    // Track reported IDs so reporter can never upvote it across reloads
+    addMyReportedId(realId);
+    addMyReportedId(realRefId);
+    if (title || description) addMyReportedId(title || description.slice(0, 60).trim());
 
     // Extract photo URLs
     const photoUrls = (photos || [])
@@ -674,11 +746,11 @@ class IssuesService {
   }
 
   /**
-   * Reset data to initial seed
+   * Reset data to clean state
    */
   resetData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ISSUES));
-    return [...INITIAL_ISSUES];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    return [];
   }
 }
 

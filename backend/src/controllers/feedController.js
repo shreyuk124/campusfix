@@ -65,11 +65,17 @@ function isModelReady(model) {
  * @param {Object} doc - Raw issue object or Mongoose document
  * @returns {Object} Public-safe issue object
  */
-export function sanitizePublicIssue(doc) {
+export function sanitizePublicIssue(doc, requestingUserId = null) {
   if (!doc) return null;
   const issue = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc };
 
-  // Never leak sensitive user fields from populated createdBy
+  // If caller is the reporter, flag isReporter: true for their frontend view
+  const rawCreatorId = issue.createdBy?._id || issue.createdBy;
+  if (requestingUserId && rawCreatorId && String(rawCreatorId) === String(requestingUserId)) {
+    issue.isReporter = true;
+  }
+
+  // Never leak sensitive user fields from populated createdBy to public callers
   if (issue.createdBy && typeof issue.createdBy === 'object') {
     issue.createdBy = {
       role: issue.createdBy.role || 'student',
@@ -115,6 +121,21 @@ export function createFeedController(deps = {}) {
       const { sortObj } = parseSort(req.query.sort);
       const filter = buildFilter(req.query);
 
+      // Feed Retention Rule: Resolved issues only stay in public feed for 5 days after resolution
+      const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
+      if (filter.status === 'Resolved') {
+        filter.$or = [
+          { resolvedAt: { $gte: fiveDaysAgo } },
+          { resolvedAt: null, updatedAt: { $gte: fiveDaysAgo } },
+        ];
+      } else if (!filter.status && !filter.$or) {
+        filter.$or = [
+          { status: { $ne: 'Resolved' } },
+          { resolvedAt: { $gte: fiveDaysAgo } },
+          { resolvedAt: null, updatedAt: { $gte: fiveDaysAgo } },
+        ];
+      }
+
       // Execute query with standard Mongoose populate paths
       let query = Model.find(filter)
         .sort(sortObj)
@@ -133,8 +154,9 @@ export function createFeedController(deps = {}) {
         Model.countDocuments ? Model.countDocuments(filter) : Promise.resolve(0),
       ]);
 
+      const requestingUserId = req.user?._id || req.user?.id || null;
       const sanitizedData = Array.isArray(rawIssues)
-        ? rawIssues.map(sanitizePublicIssue)
+        ? rawIssues.map((doc) => sanitizePublicIssue(doc, requestingUserId))
         : [];
 
       return res.status(200).json({
@@ -199,9 +221,10 @@ export function createFeedController(deps = {}) {
         });
       }
 
+      const requestingUserId = req.user?._id || req.user?.id || null;
       return res.status(200).json({
         success: true,
-        data: sanitizePublicIssue(rawIssue),
+        data: sanitizePublicIssue(rawIssue, requestingUserId),
       });
     } catch (err) {
       if (err instanceof QueryValidationError) {
@@ -266,13 +289,12 @@ export function createFeedController(deps = {}) {
       }
 
       if (req.query.tab === 'my-active' || req.query.tab === 'active') {
-        filter.status = { $in: ['Reported', 'Assigned', 'In Progress', 'Reopened'] };
+        filter.status = { $in: ['Reported', 'Assigned', 'In Progress'] };
       } else if (
         req.query.tab === 'my-resolved' ||
-        req.query.tab === 'resolved' ||
-        req.query.tab === 'closed'
+        req.query.tab === 'resolved'
       ) {
-        filter.status = { $in: ['Resolved', 'Closed', 'Rejected', 'Merged'] };
+        filter.status = 'Resolved';
       }
 
       let query = Model.find(filter)

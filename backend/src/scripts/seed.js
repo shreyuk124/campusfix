@@ -174,121 +174,41 @@ export async function seedDatabase() {
     }
     console.log(` [3/5] Upserted ${buildingMap.size} Campus Buildings.`);
 
-    // 4. Upsert Demo Users
-    let studentUser = await User.findOne({ email: 'alex.student@campus.edu' });
-    if (!studentUser) {
-      studentUser = await User.create({
-        name: 'Alex Student',
-        email: 'alex.student@campus.edu',
-        password: 'CampusPass2026!',
-        role: 'student',
-        studentId: 'ST-2026-9041',
-      });
-    }
+    // 4. Ensure Master Production Admin Account
+    let adminUser = await User.findOne({
+      email: { $in: ['admin@coeptech.ac.in', 'admin@coeptech.ac'] },
+    }).select('+password');
 
-    let staffUser = await User.findOne({ email: 'rajesh.electrician@campusfix.edu' });
-    if (!staffUser) {
-      staffUser = await User.create({
-        name: 'Rajesh Electrician',
-        email: 'rajesh.electrician@campusfix.edu',
-        password: 'StaffPass2026!',
-        role: 'staff',
-      });
-    }
-
-    let adminUser = await User.findOne({ email: 'sarah.admin@campusfix.edu' });
     if (!adminUser) {
       adminUser = await User.create({
-        name: 'Sarah Admin',
-        email: 'sarah.admin@campusfix.edu',
-        password: 'AdminSecret2026!',
+        name: 'COEP Admin',
+        email: 'admin@coeptech.ac.in',
+        password: 'admin123',
         role: 'admin',
       });
-    }
-    console.log(' [4/5] Seeded Demo Users (Student, Staff, Admin).');
-
-    // 5. Seed Initial Sample Issues
-    const sampleCount = await Issue.countDocuments();
-    if (sampleCount === 0) {
-      const library = buildingMap.get('Central Library') || Array.from(buildingMap.values())[0];
-      const compDept = buildingMap.get('Computer Engineering & IT Building') || Array.from(buildingMap.values())[1];
-      const academicComplex = buildingMap.get('Academic Complex') || Array.from(buildingMap.values())[2];
-
-      const plumbingCat = categoryMap.get('plumbing');
-      const wifiCat = categoryMap.get('wifi');
-      const elecCat = categoryMap.get('electrical');
-      const furnCat = categoryMap.get('furniture');
-
-      const sampleIssues = [
-        {
-          refId: 'CF-10291',
-          title: 'Water leaking in Academic Complex washroom',
-          category: plumbingCat ? plumbingCat._id : null,
-          building: academicComplex._id,
-          campus: 'north',
-          locationText: 'Academic Complex · 2nd Floor · Washroom 204',
-          description: 'Overhead flush pipe is constantly leaking onto the corridor floor.',
-          status: 'In Progress',
-          priorityScore: 55,
-          priorityBand: 'High',
-          reportCount: 12,
-          createdBy: studentUser._id,
-          assignedTeam: teamMap.get('Plumbing & Water Services Team')?._id || null,
-        },
-        {
-          refId: 'CF-20412',
-          title: 'Wi-Fi unavailable in the central library reading hall',
-          category: wifiCat ? wifiCat._id : null,
-          building: library._id,
-          campus: 'north',
-          locationText: 'Central Library · Ground Floor · Reference Section',
-          description: 'COEP-Secure Wi-Fi router AP-04 is blinking red with zero throughput.',
-          status: 'Assigned',
-          priorityScore: 35,
-          priorityBand: 'Medium',
-          reportCount: 8,
-          createdBy: studentUser._id,
-          assignedTeam: teamMap.get('IT Maintenance Team')?._id || null,
-        },
-        {
-          refId: 'CF-30948',
-          title: 'Sparks from switchboard in Lab 102',
-          category: elecCat ? elecCat._id : null,
-          building: compDept._id,
-          campus: 'north',
-          locationText: 'Computer & IT Dept · 1st Floor · Lab 102',
-          description: 'Terminal block sparking when multiple PCs are powered on.',
-          status: 'Reported',
-          priorityScore: 80,
-          priorityBand: 'Critical',
-          reportCount: 15,
-          createdBy: studentUser._id,
-          assignedTeam: teamMap.get('Electrical Team')?._id || null,
-        },
-        {
-          refId: 'CF-40812',
-          title: 'Broken lecture bench in Room 204',
-          category: furnCat ? furnCat._id : null,
-          building: academicComplex._id,
-          campus: 'north',
-          locationText: 'Academic Complex · 2nd Floor · Classroom 204',
-          description: 'Third row wooden bench has loose leg joint and tilts dangerously.',
-          status: 'Resolved',
-          priorityScore: 10,
-          priorityBand: 'Low',
-          reportCount: 2,
-          createdBy: studentUser._id,
-          assignedTeam: teamMap.get('Carpentry & Civil Team')?._id || null,
-          resolvedAt: new Date(),
-          resolutionNote: 'Replaced wooden support strut and re-tightened bracket bolts.',
-        },
-      ];
-
-      await Issue.insertMany(sampleIssues.filter((i) => i.category && i.building));
-      console.log(' [5/5] Seeded live sample issues.');
+      console.log(' [4/4] Created master admin account (admin@coeptech.ac.in).');
     } else {
-      console.log(` [5/5] Issues collection already populated (${sampleCount} existing).`);
+      if (adminUser.role !== 'admin') {
+        adminUser.role = 'admin';
+        await adminUser.save();
+      }
+      console.log(' [4/4] Master admin account verified.');
     }
+
+    // Purge any legacy demo accounts and sample issues from database
+    await User.deleteMany({
+      email: { $in: ['alex.student@campus.edu', 'rajesh.electrician@campusfix.edu'] },
+    });
+    const purgedDemoIssues = await Issue.deleteMany({
+      refId: { $in: ['CF-10291', 'CF-20412', 'CF-30948', 'CF-40812'] },
+    });
+    if (purgedDemoIssues.deletedCount > 0) {
+      console.log(` 🧹 Purged ${purgedDemoIssues.deletedCount} legacy demo mock issues.`);
+    }
+
+    console.log('----------------------------------------------------');
+    console.log(' ✅ LIVE SEEDING COMPLETE: Catalog and admin ready (0 mock issues).');
+    console.log('----------------------------------------------------');
 
     console.log('----------------------------------------------------');
     console.log(' ✅ SEEDING COMPLETE: Database is fully initialized!');

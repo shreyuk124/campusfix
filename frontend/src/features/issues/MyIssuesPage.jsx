@@ -42,10 +42,10 @@ export default function MyIssuesPage() {
       const res = await issuesApi.getMyIssues({ limit: 100 });
       const rawList = Array.isArray(res?.data) ? res.data : [];
       const activeCount = rawList.filter((i) =>
-        ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
+        ['Reported', 'Assigned', 'In Progress'].includes(i.status)
       ).length;
       const resolvedCount = rawList.filter((i) =>
-        ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
+        i.status === 'Resolved'
       ).length;
       setTabCounts({ active: activeCount, resolved: resolvedCount });
     } catch {
@@ -53,10 +53,10 @@ export default function MyIssuesPage() {
       const all = issuesService.getAllLocalIssues();
       const myIssues = all.filter((i) => i.isReporter);
       const activeCount = myIssues.filter((i) =>
-        ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
+        ['Reported', 'Assigned', 'In Progress'].includes(i.status)
       ).length;
       const resolvedCount = myIssues.filter((i) =>
-        ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
+        i.status === 'Resolved'
       ).length;
       setTabCounts({ active: activeCount, resolved: resolvedCount });
     }

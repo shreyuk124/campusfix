@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 export default function TopBar({ onMenuClick }) {
   return (
@@ -16,10 +16,7 @@ export default function TopBar({ onMenuClick }) {
           </button>
 
           <Link to="/" className="flex items-center gap-2">
-            <ShieldCheck className="text-brand-500" size={26} />
-            <span className="text-xl font-bold text-ink">
-              CampusFix
-            </span>
+            <img src="/logo.png" alt="CampusFix" className="h-8 w-auto object-contain" />
           </Link>
         </div>
 

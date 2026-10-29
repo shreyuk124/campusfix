@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Wrench,
   GraduationCap,
   HardHat,
   Shield,
@@ -11,7 +10,6 @@ import {
   AlertCircle,
   Lock,
   ArrowRight,
-  Zap,
   Eye,
   EyeOff,
   Sparkles,
@@ -94,34 +92,6 @@ export default function LandingPage() {
     setServerError('');
     clearLoginErrors();
     clearSignupErrors();
-  };
-
-  // 1-Click Demo Credentials Autofill
-  const handleQuickFill = () => {
-    setServerError('');
-    clearLoginErrors();
-    clearSignupErrors();
-
-    if (authMode === 'signin') {
-      if (selectedRole === 'student') {
-        setLoginValue('email', 'alex.student@campus.edu', { shouldValidate: true });
-        setLoginValue('password', 'CampusPass2026!', { shouldValidate: true });
-      } else if (selectedRole === 'staff') {
-        setLoginValue('email', 'rajesh.electrician@campusfix.edu', { shouldValidate: true });
-        setLoginValue('password', 'StaffPass2026!', { shouldValidate: true });
-      } else {
-        setLoginValue('email', 'sarah.admin@campusfix.edu', { shouldValidate: true });
-        setLoginValue('password', 'AdminSecret2026!', { shouldValidate: true });
-      }
-    } else {
-      // Sign Up autofill
-      setSignupValue('fullName', selectedRole === 'student' ? 'Rohit Deshmukh' : selectedRole === 'staff' ? 'Sunil Kamble' : 'Admin Sarthak', { shouldValidate: true });
-      setSignupValue('email', selectedRole === 'student' ? 'rohit.deshmukh@campus.edu' : selectedRole === 'staff' ? 'sunil.maintenance@campusfix.edu' : 'sarthak.admin@campusfix.edu', { shouldValidate: true });
-      setSignupValue('studentId', selectedRole === 'student' ? 'ST-2026-9041' : 'STF-502', { shouldValidate: true });
-      setSignupValue('password', 'CampusFix2026!', { shouldValidate: true });
-      setSignupValue('confirmPassword', 'CampusFix2026!', { shouldValidate: true });
-      setSignupValue('acceptTerms', true, { shouldValidate: true });
-    }
   };
 
   // Navigate user strictly based on their assigned role
@@ -211,15 +181,10 @@ export default function LandingPage() {
       <header className="border-b border-line bg-surface/90 backdrop-blur-md sticky top-0 z-30">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-white shadow-xs">
-              <Wrench size={22} strokeWidth={2.2} />
-            </span>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-ink">CampusFix</span>
-              <p className="text-[11px] text-muted hidden sm:block">
-                Campus Infrastructure &amp; Maintenance Resolution
-              </p>
-            </div>
+            <img src="/logo.png" alt="CampusFix" className="h-9 w-auto object-contain" />
+            <p className="text-[11px] text-muted hidden sm:block border-l border-line pl-3">
+              Campus Infrastructure &amp; Maintenance Resolution
+            </p>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-muted font-medium">
@@ -371,20 +336,6 @@ export default function LandingPage() {
                         ? 'Estate authorities triage tickets, dispatch crews, and oversee campus repairs.'
                         : 'Students report issues, upvote active complaints, and track repairs.'}
                     </p>
-
-                    {/* 1-Click Demo Fill Action */}
-                    {selectedRole === 'admin' && (
-                      <button
-                        type="button"
-                        onClick={handleQuickFill}
-                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/90 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
-                      >
-                        <Zap size={14} className="text-brand-600 fill-brand-600" />
-                        <span>
-                          1-Click Demo Fill (Admin)
-                        </span>
-                      </button>
-                    )}
                   </div>
                 ) : (
                   /* Sign Up is strictly for Students */
@@ -428,8 +379,8 @@ export default function LandingPage() {
                         required
                         placeholder={
                           selectedRole === 'admin'
-                            ? 'admin@campusfix.edu'
-                            : 'alex.student@campus.edu'
+                            ? 'admin@coeptech.ac.in'
+                            : 'student@coeptech.ac.in'
                         }
                         error={loginErrors.email?.message}
                         disabled={isLoginSubmitting}
@@ -491,7 +442,7 @@ export default function LandingPage() {
                         id="landing-signup-name"
                         label="Full Legal Name"
                         required
-                        placeholder="e.g. Alex Sharma"
+                        placeholder="e.g. Rohit Deshmukh"
                         error={signupErrors.fullName?.message}
                         disabled={isSignupSubmitting}
                       />
@@ -504,7 +455,7 @@ export default function LandingPage() {
                         type="email"
                         label="Official Campus Email"
                         required
-                        placeholder="name@campus.edu"
+                        placeholder="student@coeptech.ac.in"
                         error={signupErrors.email?.message}
                         disabled={isSignupSubmitting}
                       />

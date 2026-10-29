@@ -3,7 +3,6 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Wrench,
   GraduationCap,
   AlertCircle,
   CheckCircle2,
@@ -21,7 +20,7 @@ import { registerSchema } from '../../lib/validation';
 import { useAuth } from './useAuth';
 import PasswordToggle from './PasswordToggle';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
-import AuthNotice from './AuthNotice';
+
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -97,16 +96,7 @@ export default function RegisterPage() {
     }
   }, [location.state]);
 
-  const handleQuickFill = () => {
-    setServerError('');
-    clearErrors();
-    setValue('fullName', 'Priya Sharma', { shouldValidate: true });
-    setValue('email', 'priya.sharma@coeptech.ac.in', { shouldValidate: true });
-    setValue('studentId', 'STU-2026-8819', { shouldValidate: true });
-    setValue('password', 'CampusPass2026!', { shouldValidate: true });
-    setValue('confirmPassword', 'CampusPass2026!', { shouldValidate: true });
-    setValue('acceptTerms', true, { shouldValidate: true });
-  };
+
 
   /**
    * Step 1: Submit initial registration form -> Triggers OTP dispatch
@@ -196,15 +186,18 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center py-6 sm:py-10">
       <div className="w-full max-w-[480px]">
-        {/* Prototype & Security Notice Banner */}
-        <AuthNotice onQuickFill={handleQuickFill} role="student" isRegister={true} />
-
         <Card className="shadow-modal">
           {/* Header */}
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
-              {step === 'otp' ? <Mail size={24} aria-hidden="true" /> : <Wrench size={24} aria-hidden="true" />}
-            </div>
+            {step === 'otp' ? (
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
+                <Mail size={24} aria-hidden="true" />
+              </div>
+            ) : (
+              <Link to="/" className="inline-block mb-3 focus:outline-none">
+                <img src="/logo.png" alt="CampusFix" className="h-10 mx-auto w-auto object-contain" />
+              </Link>
+            )}
             <h1 className="text-2xl font-bold tracking-tight text-ink">
               {step === 'otp' ? 'Verify Institutional Email' : 'Create Student Account'}
             </h1>

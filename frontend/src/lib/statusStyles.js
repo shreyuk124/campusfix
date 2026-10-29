@@ -3,10 +3,6 @@ export const STATUS_STYLES = {
   Assigned: 'bg-sky-100 text-sky-800',
   'In Progress': 'bg-indigo-100 text-indigo-800',
   Resolved: 'bg-teal-50 text-teal-700',
-  Closed: 'bg-slate-200 text-slate-700',
-  Reopened: 'bg-red-50 text-red-700',
-  Rejected: 'bg-gray-100 text-gray-600',
-  Merged: 'bg-purple-50 text-purple-700',
 };
 
 export const PRIORITY_STYLES = {
@@ -33,10 +29,6 @@ export const STATUS_CONFIG = {
   Assigned: { label: 'Assigned', bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD' },
   'In Progress': { label: 'In Progress', bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' },
   Resolved: { label: 'Resolved', bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
-  Closed: { label: 'Closed', bg: '#F8FAFC', text: '#64748B', border: '#E2E8F0' },
-  Reopened: { label: 'Reopened', bg: '#FEF2F2', text: '#B91C1C', border: '#FECACA' },
-  Rejected: { label: 'Rejected', bg: '#F1F5F9', text: '#475569', border: '#E2E8F0' },
-  Merged: { label: 'Merged', bg: '#FAF5FF', text: '#7E22CE', border: '#E9D5FF' },
 };
 
 export const PRIORITY_BANDS = [

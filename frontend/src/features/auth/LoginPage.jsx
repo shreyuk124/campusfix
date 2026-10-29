@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
-  Wrench,
   GraduationCap,
   Shield,
   HardHat,
@@ -11,14 +10,13 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  Zap,
   X,
 } from 'lucide-react';
 import { Button, Input, Card } from '../../components/ui';
 import { loginSchema } from '../../lib/validation';
 import { useAuth } from './useAuth';
 import PasswordToggle from './PasswordToggle';
-import AuthNotice from './AuthNotice';
+
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -56,20 +54,7 @@ export default function LoginPage() {
     clearErrors();
   };
 
-  const handleQuickFill = () => {
-    setServerError('');
-    clearErrors();
-    if (selectedRole === 'student') {
-      setValue('email', 'alex.student@campus.edu', { shouldValidate: true });
-      setValue('password', 'CampusPass2026!', { shouldValidate: true });
-    } else if (selectedRole === 'staff') {
-      setValue('email', 'rajesh.electrician@campusfix.edu', { shouldValidate: true });
-      setValue('password', 'StaffPass2026!', { shouldValidate: true });
-    } else {
-      setValue('email', 'sarah.admin@campusfix.edu', { shouldValidate: true });
-      setValue('password', 'AdminSecret2026!', { shouldValidate: true });
-    }
-  };
+
 
   const onSubmit = async (data) => {
     setServerError('');
@@ -103,15 +88,12 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center py-6 sm:py-10">
       <div className="w-full max-w-[440px]">
-        {/* Prototype & Security Notice Banner */}
-        <AuthNotice onQuickFill={selectedRole === 'admin' ? handleQuickFill : undefined} role={selectedRole} isRegister={false} />
-
         <Card className="shadow-modal">
           {/* Brand & Page Header */}
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm ring-4 ring-brand-100">
-              <Wrench size={24} aria-hidden="true" />
-            </div>
+            <Link to="/" className="inline-block mb-3 focus:outline-none">
+              <img src="/logo.png" alt="CampusFix" className="h-10 mx-auto w-auto object-contain" />
+            </Link>
             <h1 className="text-2xl font-bold tracking-tight text-ink">
               Sign In to CampusFix
             </h1>
@@ -216,17 +198,6 @@ export default function LoginPage() {
                     ? 'Manage issue triage, assign resolution teams, and monitor SLAs.'
                     : 'Report broken campus facilities, vote, and track resolution timelines.'}
                 </p>
-
-                {selectedRole === 'admin' && (
-                  <button
-                    type="button"
-                    onClick={handleQuickFill}
-                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/80 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
-                  >
-                    <Zap size={14} className="text-brand-600" />
-                    <span>1-Click Demo Fill (Admin)</span>
-                  </button>
-                )}
               </div>
 
               {/* Failed-Login State / Server Error Alert */}
@@ -270,8 +241,8 @@ export default function LoginPage() {
                     autoComplete="email"
                     placeholder={
                       selectedRole === 'admin'
-                        ? 'admin@campusfix.edu'
-                        : 'student@university.edu'
+                        ? 'admin@coeptech.ac.in'
+                        : 'student@coeptech.ac.in'
                     }
                     helperText={
                       selectedRole === 'admin'

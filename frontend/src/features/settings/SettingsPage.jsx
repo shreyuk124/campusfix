@@ -3,12 +3,14 @@ import Card from '../../components/ui/Card';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import { User, Shield, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 
 export default function SettingsPage() {
-  const [name, setName] = useState('Sarthak Sharma');
-  const [email, setEmail] = useState('sarthak@university.edu');
-  const [studentId, setStudentId] = useState('CF-2026-9042');
-  const [defaultCampus, setDefaultCampus] = useState('College');
+  const { user } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [studentId, setStudentId] = useState(user?.studentId || '');
+  const [defaultCampus, setDefaultCampus] = useState('COEP Main Campus');
   const [notifyStatusChange, setNotifyStatusChange] = useState(true);
   const [notifySafetyAlerts, setNotifySafetyAlerts] = useState(true);
   const [notifyWeeklyDigest, setNotifyWeeklyDigest] = useState(false);

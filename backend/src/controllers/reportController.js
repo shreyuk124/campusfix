@@ -318,10 +318,10 @@ export const upvoteIssue = async (req, res, next) => {
       });
     }
 
-    if (['Resolved', 'Closed'].includes(existingIssue.status)) {
+    if (existingIssue.status === 'Resolved') {
       return res.status(400).json({
         success: false,
-        message: 'This issue has already been resolved or closed.',
+        message: 'This issue has already been resolved.',
       });
     }
 
@@ -335,6 +335,15 @@ export const upvoteIssue = async (req, res, next) => {
         },
       });
     }
+
+    // The person who reported the issue cannot upvote their own issue
+    if (existingIssue.createdBy && String(existingIssue.createdBy) === String(reporterId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'The reporter cannot upvote their own reported issue.',
+      });
+    }
+
     const note = req.body.note ? req.body.note.trim() : 'Upvoted by affected student';
 
     try {
@@ -467,8 +476,6 @@ export const updateIssueStatus = async (req, res, next) => {
         'Assigned',
         'In Progress',
         'Resolved',
-        'Closed',
-        'Reopened',
       ];
 
       if (!validStatuses.includes(status)) {
@@ -484,9 +491,6 @@ export const updateIssueStatus = async (req, res, next) => {
       issue.status = status;
       if (status === 'Resolved') {
         issue.resolvedAt = new Date();
-      }
-      if (status === 'Closed') {
-        issue.closedAt = new Date();
       }
     }
 

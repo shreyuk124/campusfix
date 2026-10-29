@@ -27,7 +27,6 @@ import {
 } from '../../components/ui';
 import {
   StatusStepper,
-  Timeline,
   PhotoGallery,
   getCategoryIcon,
 } from './components';
@@ -217,7 +216,7 @@ export default function IssueDetailPage() {
     );
   }
 
-  const isResolved = issue.status === 'Resolved' || issue.status === 'Closed';
+  const isResolved = issue.status === 'Resolved';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -346,16 +345,6 @@ export default function IssueDetailPage() {
             )}
           </div>
 
-          {/* 3. Timeline & Activity History */}
-          <section aria-labelledby="timeline-heading">
-            <h2 id="timeline-heading" className="sr-only">
-              Issue Timeline
-            </h2>
-            <Timeline
-              timeline={issue.timeline}
-              resolutionNote={issue.resolutionNote}
-            />
-          </section>
         </div>
 
         {/* Side Column (1 col) */}

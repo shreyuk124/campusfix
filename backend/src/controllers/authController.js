@@ -444,11 +444,61 @@ export const login = async (req, res, next) => {
     // 2. Normalize email
     const normalizedEmail = email.trim().toLowerCase();
 
+    // Strict Admin Access Control:
+    // Supports both admin@coeptech.ac.in and admin@coeptech.ac with password admin123
+    const isAdminEmail = normalizedEmail === 'admin@coeptech.ac.in' || normalizedEmail === 'admin@coeptech.ac';
+    if (isAdminEmail) {
+      if (password !== 'admin123') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.',
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'Invalid email or password.',
+          },
+        });
+      }
+
+      let adminUser = await User.findOne({ 
+        email: { $in: ['admin@coeptech.ac.in', 'admin@coeptech.ac'] } 
+      }).select('+password');
+
+      if (!adminUser) {
+        const passwordHash = await bcrypt.hash('admin123', 10);
+        adminUser = await User.create({
+          name: 'COEP Admin',
+          email: normalizedEmail,
+          password: passwordHash,
+          role: 'admin',
+        });
+      } else {
+        let needsSave = false;
+        if (adminUser.role !== 'admin') {
+          adminUser.role = 'admin';
+          needsSave = true;
+        }
+        const pwMatch = await bcrypt.compare('admin123', adminUser.password);
+        if (!pwMatch) {
+          adminUser.password = await bcrypt.hash('admin123', 10);
+          needsSave = true;
+        }
+        if (needsSave) await adminUser.save();
+      }
+
+      const token = generateToken(adminUser._id, 'admin');
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user: sanitizeUser(adminUser),
+      });
+    }
+
     // 3. Find user and explicitly select password (since select: false in schema)
     const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     // 4. Constant-time comparison or uniform 401 response to prevent user enumeration
-    if (!user) {
+    if (!user || (user.role === 'admin' && !isAdminEmail)) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.',

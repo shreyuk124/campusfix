@@ -26,7 +26,7 @@ export const issuesApi = {
     return response.data;
   },
 
-  // 4. Fetch all issues (Feed / List)
+  // 4. Fetch all issues (Public Feed / List)
   getAll: async (params) => {
     const response = await api.get('/issues', { params });
     return response.data;
@@ -57,6 +57,12 @@ export const issuesApi = {
     if (staffName) payload.assignedStaff = staffName;
     if (note) payload.resolutionNote = note;
     const response = await api.patch(`/issues/${id}/status`, payload);
+    return response.data;
+  },
+
+  // 8. Fetch user's own issues (My Reports / Protected)
+  getMyIssues: async (params = {}) => {
+    const response = await api.get('/issues/mine', { params });
     return response.data;
   },
 };

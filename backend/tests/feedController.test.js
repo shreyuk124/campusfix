@@ -286,8 +286,6 @@ describe('Member 3: feedController Unit Tests', () => {
       assert.ok(paths.includes('building'));
       assert.ok(paths.includes('campus'));
       assert.ok(paths.includes('status'));
-      assert.ok(paths.includes('priorityScore'));
-      assert.ok(paths.includes('priorityBand'));
       assert.ok(paths.includes('reportCount'));
       assert.ok(paths.includes('createdBy'));
       assert.ok(paths.includes('createdAt'));

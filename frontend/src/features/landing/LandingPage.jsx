@@ -129,10 +129,10 @@ export default function LandingPage() {
     const r = (role || 'student').toLowerCase();
     if (r === 'admin') {
       navigate('/admin', { replace: true });
-    } else if (r === 'staff') {
-      navigate('/staff', { replace: true });
+    } else if (fromLocation && fromLocation !== '/report' && fromLocation !== '/') {
+      navigate(fromLocation, { replace: true });
     } else {
-      navigate(fromLocation || '/feed', { replace: true });
+      navigate('/feed', { replace: true });
     }
   };
 
@@ -306,7 +306,7 @@ export default function LandingPage() {
                     onClick={() => navigateByRole(user.role)}
                     className="gap-2"
                   >
-                    <span>Continue to {user.role === 'admin' ? 'Authority Portal' : user.role === 'staff' ? 'Staff Portal' : 'Student Feed'}</span>
+                    <span>Continue to {user.role === 'admin' ? 'Authority Portal' : 'Student Feed'}</span>
                     <ArrowRight size={16} />
                   </Button>
                 </div>
@@ -366,7 +366,7 @@ export default function LandingPage() {
                     <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-muted">
                       Select Your Role
                     </label>
-                    <div className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-surface-muted p-1">
+                    <div className="grid grid-cols-2 gap-1 rounded-lg border border-line bg-surface-muted p-1">
                       <button
                         type="button"
                         onClick={() => handleRoleChange('student')}
@@ -378,19 +378,6 @@ export default function LandingPage() {
                       >
                         <GraduationCap size={15} />
                         <span>Student</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRoleChange('staff')}
-                        className={`flex items-center justify-center gap-1.5 rounded-md py-2 text-xs font-semibold transition-all ${
-                          selectedRole === 'staff'
-                            ? 'bg-surface text-brand-600 shadow-xs border border-line/50'
-                            : 'text-muted hover:text-ink'
-                        }`}
-                      >
-                        <HardHat size={15} />
-                        <span>Staff</span>
                       </button>
 
                       <button
@@ -408,24 +395,24 @@ export default function LandingPage() {
                     </div>
 
                     <p className="mt-1.5 text-[11px] text-muted">
-                      {selectedRole === 'student'
-                        ? 'Students report issues, upvote active complaints, and track repairs.'
-                        : selectedRole === 'staff'
-                        ? 'Facilities staff receive assigned tasks and view issue queues.'
-                        : 'Estate authorities triage tickets, dispatch crews, and oversee campus repairs.'}
+                      {selectedRole === 'admin'
+                        ? 'Estate authorities triage tickets, dispatch crews, and oversee campus repairs.'
+                        : 'Students report issues, upvote active complaints, and track repairs.'}
                     </p>
 
                     {/* 1-Click Demo Fill Action */}
-                    <button
-                      type="button"
-                      onClick={handleQuickFill}
-                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/90 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
-                    >
-                      <Zap size={14} className="text-brand-600 fill-brand-600" />
-                      <span>
-                        1-Click Demo Fill ({selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'})
-                      </span>
-                    </button>
+                    {selectedRole === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={handleQuickFill}
+                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/90 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors shadow-xs"
+                      >
+                        <Zap size={14} className="text-brand-600 fill-brand-600" />
+                        <span>
+                          1-Click Demo Fill (Admin)
+                        </span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   /* Sign Up is strictly for Students */
@@ -464,16 +451,12 @@ export default function LandingPage() {
                         label={
                           selectedRole === 'admin'
                             ? 'Admin Email Address'
-                            : selectedRole === 'staff'
-                            ? 'Staff Email Address'
                             : 'Student University Email'
                         }
                         required
                         placeholder={
                           selectedRole === 'admin'
                             ? 'admin@campusfix.edu'
-                            : selectedRole === 'staff'
-                            ? 'staff@campusfix.edu'
                             : 'alex.student@campus.edu'
                         }
                         error={loginErrors.email?.message}
@@ -518,7 +501,7 @@ export default function LandingPage() {
                       >
                         <Lock size={15} />
                         <span>
-                          Sign In as {selectedRole === 'admin' ? 'Admin' : selectedRole === 'staff' ? 'Staff' : 'Student'}
+                          Sign In as {selectedRole === 'admin' ? 'Admin' : 'Student'}
                         </span>
                       </Button>
                     </div>

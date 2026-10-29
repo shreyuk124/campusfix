@@ -49,6 +49,7 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
     // Process files within available slots
     const filesToProcess = Array.from(incomingFileList).slice(0, remainingSlots);
     const newValidPhotos = [];
+    let completed = 0;
 
     for (const file of filesToProcess) {
       // Check file size (< 25MB)
@@ -58,22 +59,34 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
         return;
       }
 
-      // Generate instant preview thumbnail
-      const previewUrl = URL.createObjectURL(file);
+      const photoId = `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-      newValidPhotos.push({
-        id: `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        file,
-        previewUrl,
-      });
+      // Read file into persistent Base64 Data URL so Android Chrome doesn't drop temporary camera cache
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        newValidPhotos.push({
+          id: photoId,
+          file,
+          previewUrl: event.target.result,
+        });
+        completed++;
+        if (completed === filesToProcess.length) {
+          onPhotosChange([...photos, ...newValidPhotos]);
+        }
+      };
+      reader.onerror = () => {
+        newValidPhotos.push({
+          id: photoId,
+          file,
+          previewUrl: URL.createObjectURL(file),
+        });
+        completed++;
+        if (completed === filesToProcess.length) {
+          onPhotosChange([...photos, ...newValidPhotos]);
+        }
+      };
+      reader.readAsDataURL(file);
     }
-
-    // Update parent list
-    onPhotosChange([...photos, ...newValidPhotos]);
-
-    // Reset input elements so taking another picture works every time
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   /**
@@ -91,29 +104,6 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
     onPhotosChange(updated);
   };
 
-  /**
-   * Open the Camera directly
-   */
-  const handleTakePhoto = (e) => {
-    e.stopPropagation();
-    if (photos.length >= MAX_PHOTOS) {
-      setLocalError(`Maximum ${MAX_PHOTOS} photos allowed.`);
-      return;
-    }
-    cameraInputRef.current?.click();
-  };
-
-  /**
-   * Open the Gallery directly
-   */
-  const handleChooseGallery = (e) => {
-    e.stopPropagation();
-    if (photos.length >= MAX_PHOTOS) {
-      setLocalError(`Maximum ${MAX_PHOTOS} photos allowed.`);
-      return;
-    }
-    galleryInputRef.current?.click();
-  };
 
   const activeError = error || localError;
 
@@ -143,24 +133,40 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
 
       {/* 1. Dedicated Camera Input (capture="environment" forces camera on mobile) */}
       <input
+        id="camera-photo-input"
         ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={(e) => handleFilesAdded(e.target.files)}
-        className="hidden"
+        onClick={(e) => {
+          e.target.value = '';
+        }}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleFilesAdded(e.target.files);
+          }
+        }}
+        className="sr-only"
         aria-hidden="true"
         tabIndex={-1}
       />
 
       {/* 2. Dedicated Gallery Input (standard file picker) */}
       <input
+        id="gallery-photo-input"
         ref={galleryInputRef}
         type="file"
         multiple
         accept="image/*"
-        onChange={(e) => handleFilesAdded(e.target.files)}
-        className="hidden"
+        onClick={(e) => {
+          e.target.value = '';
+        }}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handleFilesAdded(e.target.files);
+          }
+        }}
+        className="sr-only"
         aria-hidden="true"
         tabIndex={-1}
       />
@@ -179,23 +185,21 @@ export default function PhotoUploader({ photos = [], onPhotosChange, error }) {
 
           {/* Action Buttons: Take Photo (Camera) & Gallery */}
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleTakePhoto}
+            <label
+              htmlFor="camera-photo-input"
               className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 cursor-pointer"
             >
               <Camera size={15} />
-              Take Photo
-            </button>
+              <span>Take Photo</span>
+            </label>
 
-            <button
-              type="button"
-              onClick={handleChooseGallery}
+            <label
+              htmlFor="gallery-photo-input"
               className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-white px-3.5 py-2 text-xs font-semibold text-ink transition hover:bg-canvas hover:border-brand-400 active:scale-95 cursor-pointer"
             >
               <ImageIcon size={15} className="text-brand-600" />
-              Choose from Gallery
-            </button>
+              <span>Choose from Gallery</span>
+            </label>
           </div>
         </div>
       )}

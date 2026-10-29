@@ -12,6 +12,7 @@ import {
 import { IssueCard, FilterBar } from './components';
 import { IssueCardSkeleton, EmptyState, ErrorState } from '../../components/ui';
 import issuesService from './issuesService';
+import { issuesApi } from '../../api/issues';
 
 export default function MyIssuesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,42 +36,75 @@ export default function MyIssuesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Compute tab counts
-  const refreshTabCounts = useCallback(() => {
-    const all = issuesService.getAllLocalIssues();
-    const myIssues = all.filter((i) => i.isReporter || i.hasJoined);
-
-    const activeCount = myIssues.filter((i) =>
-      ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
-    ).length;
-
-    const resolvedCount = myIssues.filter((i) =>
-      ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
-    ).length;
-
-    setTabCounts({ active: activeCount, resolved: resolvedCount });
+  // Compute tab counts exclusively for currently authenticated student
+  const refreshTabCounts = useCallback(async () => {
+    try {
+      const res = await issuesApi.getMyIssues({ limit: 100 });
+      const rawList = Array.isArray(res?.data) ? res.data : [];
+      const activeCount = rawList.filter((i) =>
+        ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
+      ).length;
+      const resolvedCount = rawList.filter((i) =>
+        ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
+      ).length;
+      setTabCounts({ active: activeCount, resolved: resolvedCount });
+    } catch {
+      // Fallback to local isolated issues
+      const all = issuesService.getAllLocalIssues();
+      const myIssues = all.filter((i) => i.isReporter);
+      const activeCount = myIssues.filter((i) =>
+        ['Reported', 'Assigned', 'In Progress', 'Reopened'].includes(i.status)
+      ).length;
+      const resolvedCount = myIssues.filter((i) =>
+        ['Resolved', 'Closed', 'Rejected', 'Merged'].includes(i.status)
+      ).length;
+      setTabCounts({ active: activeCount, resolved: resolvedCount });
+    }
   }, []);
 
-  // Fetch my issues according to current tab and filters
+  // Fetch my issues according to current tab and filters from protected backend
   const fetchMyIssues = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const tabParam = currentTab === 'resolved' ? 'my-resolved' : 'my-active';
+      const tabParam = currentTab === 'resolved' ? 'resolved' : 'active';
+      let items = [];
+      let total = 0;
+      let totalPages = 1;
 
-      const result = await issuesService.getIssues({
-        page,
-        limit,
-        tab: tabParam,
-        ...filters,
-        simulateDelay: 200,
-      });
+      try {
+        const res = await issuesApi.getMyIssues({
+          page,
+          limit,
+          tab: tabParam,
+          ...filters,
+        });
 
-      setData(result);
+        const rawList = Array.isArray(res?.data) ? res.data : [];
+        items = rawList.map((doc) => ({
+          ...issuesService.normalizeIssue(doc),
+          isReporter: true,
+        }));
+        total = res?.pagination?.total ?? items.length;
+        totalPages = res?.pagination?.totalPages ?? 1;
+      } catch (apiErr) {
+        // Fallback to isolated local service
+        const fallback = await issuesService.getIssues({
+          page,
+          limit,
+          tab: tabParam === 'resolved' ? 'my-resolved' : 'my-active',
+          ...filters,
+        });
+        items = fallback.issues;
+        total = fallback.total;
+        totalPages = fallback.totalPages;
+      }
+
+      setData({ issues: items, total, totalPages });
       refreshTabCounts();
     } catch (err) {
       console.error('Error fetching my issues:', err);
-      setError(err.message || 'Could not load your issues');
+      setError(err?.response?.data?.error?.message || err.message || 'Could not load your issues');
     } finally {
       setIsLoading(false);
     }

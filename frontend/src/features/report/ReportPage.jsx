@@ -336,20 +336,6 @@ export default function ReportPage() {
 
             <hr className="border-line" />
 
-            {/* Photo Evidence */}
-            <section>
-              <PhotoUploader
-                photos={photos}
-                onPhotosChange={(newPhotos) => {
-                  setPhotos(newPhotos);
-                  setErrors((prev) => ({ ...prev, photos: '' }));
-                }}
-                error={errors.photos}
-              />
-            </section>
-
-            <hr className="border-line" />
-
             {/* Description Textarea */}
             <section className="space-y-1.5">
               <label htmlFor="problem-desc" className="block text-sm font-semibold text-ink">
@@ -376,6 +362,20 @@ export default function ReportPage() {
               {errors.description && (
                 <p className="text-xs font-medium text-danger">{errors.description}</p>
               )}
+            </section>
+
+            <hr className="border-line" />
+
+            {/* Photo Evidence */}
+            <section>
+              <PhotoUploader
+                photos={photos}
+                onPhotosChange={(newPhotos) => {
+                  setPhotos(newPhotos);
+                  setErrors((prev) => ({ ...prev, photos: '' }));
+                }}
+                error={errors.photos}
+              />
             </section>
 
             {/* Server Error Banner */}

@@ -112,7 +112,19 @@ export const createIssue = async (req, res, next) => {
   let uploadedFilePaths = [];
 
   try {
-    // Step 1: Collect uploaded photos if any
+    // Step 1: Authentication guard - strictly require authenticated user
+    const reporterId = req.user?._id || req.user?.id;
+    if (!reporterId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required. Please log in to report an issue.',
+        },
+      });
+    }
+
+    // Step 2: Collect uploaded photos if any
     if (req.files && req.files.length > 0) {
       uploadedFilePaths = req.files.map((file) => file.path);
     }
@@ -208,15 +220,7 @@ export const createIssue = async (req, res, next) => {
       throw new Error('INVALID_ID_FORMAT');
     }
 
-    // Step 5: Resolve reporter attribution
-    let reporterId = req.user?._id;
-    if (!reporterId && userId && mongoose.Types.ObjectId.isValid(userId)) {
-      reporterId = userId;
-    }
-    if (!reporterId) {
-      const anyUser = await User.findOne({ role: 'student' });
-      reporterId = anyUser ? anyUser._id : new mongoose.Types.ObjectId();
-    }
+    // Step 5: Reporter identity is already strictly verified from authenticated context
 
     // Step 6: Create and save Issue (clean model, reportCount-driven, NO priority scores)
     const newIssue = new Issue({
@@ -321,7 +325,16 @@ export const upvoteIssue = async (req, res, next) => {
       });
     }
 
-    const reporterId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
+    const reporterId = req.user?._id || req.user?.id;
+    if (!reporterId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required. Please log in to upvote an issue.',
+        },
+      });
+    }
     const note = req.body.note ? req.body.note.trim() : 'Upvoted by affected student';
 
     try {

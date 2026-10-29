@@ -253,6 +253,28 @@ export function createFeedController(deps = {}) {
       // Filter exclusively by the logged-in student's ID
       const filter = { createdBy: userId };
 
+      if (req.query.status && req.query.status !== 'all') {
+        const statuses = String(req.query.status)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (statuses.length === 1) {
+          filter.status = statuses[0];
+        } else if (statuses.length > 1) {
+          filter.status = { $in: statuses };
+        }
+      }
+
+      if (req.query.tab === 'my-active' || req.query.tab === 'active') {
+        filter.status = { $in: ['Reported', 'Assigned', 'In Progress', 'Reopened'] };
+      } else if (
+        req.query.tab === 'my-resolved' ||
+        req.query.tab === 'resolved' ||
+        req.query.tab === 'closed'
+      ) {
+        filter.status = { $in: ['Resolved', 'Closed', 'Rejected', 'Merged'] };
+      }
+
       let query = Model.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)

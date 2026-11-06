@@ -4,7 +4,7 @@
 
 CampusFix is a web-based platform designed to simplify how students report campus problems and how college authorities manage and resolve them. From broken classroom equipment and Wi-Fi connectivity issues to water leakage and infrastructure problems, CampusFix aims to make campus maintenance more transparent, organised, and accountable.
 
-**Project Status:** In Development — Initial Planning and Repository Setup
+https://campusfix-7xe.vercel.app/
 
 ---
 

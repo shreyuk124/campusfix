@@ -110,32 +110,6 @@ The backend will validate incoming requests, enforce role-based permissions, man
 
 Access to actions and data will be controlled by the user's role.
 
-## Development Roadmap
-
-- [x] Create the initial GitHub repository.
-- [ ] Finalise product requirements and the minimum viable product (MVP).
-- [ ] Finalise the architecture, database design, and API contract.
-- [ ] Set up the frontend and backend projects.
-- [ ] Implement authentication and role-based access.
-- [ ] Implement issue reporting and database storage.
-- [ ] Implement issue management, assignment, and status tracking.
-- [ ] Integrate the frontend and backend.
-- [ ] Test the end-to-end workflow.
-- [ ] Deploy the application and prepare a working demonstration.
-
-## Getting Started
-
-CampusFix is currently in its planning and initial setup stage. Installation instructions, environment configuration, and development commands will be added once the application scaffold is ready.
-
-### Prerequisites (Planned)
-
-- Node.js and npm
-- Git
-- A MongoDB database, such as MongoDB Atlas
-- A code editor such as Cursor or VS Code
-
-Do not configure production credentials or commit database passwords or API secrets to GitHub.
-
 ## Team Collaboration
 
 CampusFix is being developed collaboratively by a four-member student team.
